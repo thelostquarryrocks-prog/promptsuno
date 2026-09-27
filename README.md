@@ -21,6 +21,7 @@ See:
 - [Product Authority](docs/PRODUCT_AUTHORITY.md)
 - [Implementation Baseline](docs/IMPLEMENTATION_BASELINE.md)
 - [Research & Migration Policy](docs/RESEARCH_MIGRATION_POLICY.md)
+- [PromptSuno Research Baseline v1](docs/PROMPTSUNO_RESEARCH_BASELINE_V1.md)
 - [Sound Brain Compiler Bridge Contract](docs/SOUNDBRAIN_COMPILER_BRIDGE.md)
 
 ## Development
