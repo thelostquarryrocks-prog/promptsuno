@@ -58,6 +58,42 @@ Runtime sources remain unchanged; the earlier 21/21 full browser, typecheck and
 8/8-page build receipts remain applicable local evidence, separately from the
 forthcoming hosted run. These CI/documentation edits add no app behavior.
 
+### Hosted drag-test correction
+
+The subsequent documentation-head run
+[36446496192](https://github.com/thelostquarryrocks-prog/promptsuno/actions/runs/36446496192)
+at `d8cadc82bffbcd00e8d3acc3b7723a6fb502e38f` passed real PostgreSQL 17/17,
+units 95/95, typecheck/lint/build, but its browser suite reported **20 passed,
+1 failed, 0 skipped**. Desktop Chromium's native raycast drag failed to collect;
+its trace, screenshot and log are preserved under
+`.verification/quota-publish/hosted-target-docs-browser-failure/` and
+`hosted-target-docs-first.log`. This is an earlier failed receipt, not final-head
+evidence or a failure of the database harness.
+
+The trace's first grabbed point `(726,362)` was only about 11 pixels from the
+destination `(720,371)`. The real scene requires movement exceeding 0.5 world
+units to enter dragging. Moving directly to center did not cross that threshold;
+after the scene advanced, remaining scanned coordinates no longer hovered a
+node. The test now makes a native 80px lateral movement, drives its real frames,
+then drags to center. No product code, scene refs, collection shortcuts, timeout,
+retry, quota/security assertion or collection/removal assertion is changed.
+
+Corrected local commands and receipts:
+
+- `node node_modules/eslint/bin/eslint.js tests/e2e/workspace.spec.ts`: 0 errors,
+  0 warnings, exit 0 (`drag-lint.log`).
+- `npm.cmd run typecheck`: route generation and TypeScript successful, exit 0
+  (`drag-typecheck.log`).
+- `npm.cmd run test:e2e -- tests/e2e/workspace.spec.ts --grep='real raycast' --repeat-each=3 --output=.verification/quota-publish/drag-results`:
+  **9 passed, 0 failed/skipped in 2.3m**, exit 0 and normal cleanup, three
+  independent scene initializations per existing browser profile; no retries
+  (`drag-browser.log`, `drag-report/`, `drag-results/`).
+- `git diff --check` and configured-credential/client-chunk scan: successful;
+  76 files/14 chunks, 0 exposed values or server markers. Migration hash unchanged.
+
+The final stacked PR description records hosted execution after this narrow
+test correction; earlier CI/local receipts remain intact and separately labeled.
+
 ## Authority and baseline
 
 The user's 2026-09-28 quota work package, current PromptSuno Project Instructions,

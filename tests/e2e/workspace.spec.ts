@@ -170,6 +170,12 @@ test('real raycast drag collects a catalog record and synchronizes removal', asy
     if (await page.evaluate(() => document.body.style.cursor) !== 'grab') continue
     await page.mouse.down()
     await page.clock.runFor(80)
+    // A raycast may hit a label already beside the Brain. Moving straight to
+    // center then stays below the scene's 0.5-world-unit drag threshold. Make
+    // a real 80px lateral drag first (inside the Canvas at every viewport),
+    // drive its frames, and only then move to the collection destination.
+    await page.mouse.move(target.x + (target.x < box.x + box.width / 2 ? 80 : -80), target.y, { steps: 5 })
+    await page.clock.runFor(80)
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 15 })
     await page.clock.runFor(400)
     await page.mouse.up()
