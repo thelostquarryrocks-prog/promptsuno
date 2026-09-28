@@ -264,6 +264,17 @@ closed with 503 in every environment. Workspace displays the quota retry delay.
 This supersedes the earlier statement that no quota implementation exists on
 this successor branch. The migration has NOT been applied remotely. Numerical
 allowances remain an operator decision, not a free/premium entitlement. Hosting
-remains blocked pending database verification, migration/configuration approval,
+remains blocked pending real Supabase verification, migration/configuration approval,
 real-account acceptance, operational spend controls and separate deployment
 authorization. See [Atomic-Compiler-Quota.md](../implementation/Atomic-Compiler-Quota.md).
+
+Local follow-up verification applied the actual migration to an isolated
+disposable PostgreSQL 17.11 cluster: 17 database checks passed, including locking,
+rollback, lost connections, ACLs/RLS and deletion. The Auth shim supplies a trusted
+subject directly and does not validate real JWTs or exercise PostgREST. This
+closes the local SQL execution gate only; the linked report retains actual
+receipts, browser results and separate staging/hosting approval requirements.
+The final independent full browser suite passed 21/21 with zero retries; final
+unit tests passed 95/95, typecheck/build/security scans passed, and lint retained
+two existing warnings with zero errors. Earlier failed and aborted receipts are
+preserved in that report. These are local fixture results, not hosted acceptance.

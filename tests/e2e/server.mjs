@@ -23,6 +23,10 @@ let quotaLimit = 10000
 let quotaMode = 'normal'
 
 const fixture = http.createServer((request, response) => {
+  // Software-rendered UI steps can outlast Node's idle keep-alive window.
+  // Disposable fixture connections must not race reuse against idle teardown.
+  // This does not retry any request or change the application's RPC deadline.
+  response.setHeader('Connection', 'close')
   response.setHeader('Access-Control-Allow-Origin', 'http://127.0.0.1:3131')
   response.setHeader('Access-Control-Allow-Headers', 'authorization, apikey, content-type, x-client-info, x-supabase-api-version')
   response.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')

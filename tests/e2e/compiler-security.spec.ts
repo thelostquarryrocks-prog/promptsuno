@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { login } from './login'
 
 const input = {
   nodes: [{ node_id: 'piano', label: 'Piano', category: 'Instrument' }],
@@ -33,11 +34,7 @@ test('browser session reaches the guarded compiler; revoked session preserves no
     if (message.type() === 'error' && !message.text().includes('status of 401')) errors.push(message.text())
   })
   const stats = async () => (await request.get('http://127.0.0.1:3132/__fixture/stats')).json()
-  await page.goto('/login', { waitUntil: 'networkidle' })
-  await page.getByLabel('Email address').fill('test@example.invalid')
-  await page.getByLabel('Password').fill('local-test-only')
-  await page.getByRole('button', { name: 'Sign In', exact: true }).click()
-  await expect(page).toHaveURL(/\/workspace$/)
+  await login(page)
   await page.getByText('Choose nodes without dragging').click()
   await page.getByRole('button', { name: 'Collect Piano', exact: true }).click()
   await page.getByLabel('Relationship notes').fill(input.relationship_notes)

@@ -190,7 +190,7 @@ function FloatingNode({ id, node, startZ, globalState, onCatch, affinities, disa
         />
       </Sphere>
       
-      <Text ref={textRef} position={[0.3, 0, 0]} fontSize={0.5} color="#ffffff" anchorX="left" anchorY="middle">
+      <Text ref={textRef} font="/fonts/Geist-Regular.ttf" position={[0.3, 0, 0]} fontSize={0.5} color="#ffffff" anchorX="left" anchorY="middle">
         {node.label}
       </Text>
     </group>

@@ -11,11 +11,13 @@ async function signInFixture(context: BrowserContext, request: APIRequestContext
   await context.addCookies([{ name: 'sb-127-auth-token', value: `base64-${Buffer.from(JSON.stringify(session)).toString('base64url')}`, url: 'http://127.0.0.1:3131' }])
 }
 
-test.afterEach(async ({ request }) => {
+test.afterEach(async ({ page, request }) => {
+  await page.goto('about:blank', { waitUntil: 'commit', timeout: 10_000 })
   await request.post('http://127.0.0.1:3132/__fixture/quota')
 })
 
 test('quota and provider errors retain intent and show retry guidance in the real browser', async ({ page, context, request }, testInfo) => {
+  await page.clock.install()
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
   page.on('console', message => {
@@ -34,10 +36,16 @@ test('quota and provider errors retain intent and show retry guidance in the rea
   await page.getByText('Choose nodes without dragging').click()
   await page.getByRole('button', { name: 'Collect Piano', exact: true }).click()
   await page.getByLabel('Relationship notes').fill(input.relationship_notes)
+  // This case exercises real HTTP reservations and UI feedback, not animation.
+  // Hold unrelated software-rendered frames; server deadlines stay wall-clock.
+  // pauseAt fast-forwards due timers once rather than waiting a real minute.
+  // The buffer exceeds slow protocol round trips without extending a deadline.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 60_000))
   const generate = page.getByRole('button', { name: 'Generate Prompt' })
   const failed = page.waitForResponse('**/api/generate')
   await generate.click()
-  expect((await failed).status()).toBe(502)
+  const failedResponse = await failed
+  expect(failedResponse.status()).toBe(502)
   await expect(page.getByRole('main').getByRole('alert')).toContainText('Your nodes and notes are still here')
   expect(await stats()).toMatchObject({ modelCalls: before + 1, quotaUsed: 1 })
 
@@ -54,8 +62,10 @@ test('quota and provider errors retain intent and show retry guidance in the rea
   await expect(generate).toBeFocused()
   expect(await stats()).toMatchObject({ modelCalls: before + 1, quotaUsed: 1 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-  await page.getByRole('main').getByRole('alert').scrollIntoViewIfNeeded()
-  await page.screenshot({ path: testInfo.outputPath('compiler-quota-exhausted.png') })
+  // Artifact framing must not wait for WebKit's animation-frame stability while
+  // the live WebGL scene runs. All state/focus assertions above remain intact.
+  await page.getByRole('main').getByRole('alert').evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }))
+  await page.screenshot({ path: testInfo.outputPath('compiler-quota-exhausted.png'), timeout: 10_000 })
 
   for (const mode of ['missing-policy', 'store-error']) {
     await request.post(`http://127.0.0.1:3132/__fixture/quota?mode=${mode}`)
