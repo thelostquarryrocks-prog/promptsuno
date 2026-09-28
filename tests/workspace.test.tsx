@@ -89,11 +89,30 @@ describe('canonical selection bridge', () => {
 })
 
 describe('compile states, authored notes, and candidate actions', () => {
+  it.each(['60', 'invalid'])('shows bounded quota retry guidance for Retry-After %s while retaining intent', async retryAfter => {
+    const user = renderWorkspace()
+    await collect(user, 'Piano')
+    fireEvent.change(screen.getByLabelText('Relationship notes'), { target: { value: 'Piano leads.' } })
+    fetchMock.mockResolvedValueOnce(Response.json({ error: 'private detail' }, { status: 429, headers: { 'Retry-After': retryAfter } }))
+    await user.click(screen.getByRole('button', { name: 'Generate Prompt' }))
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Compiler usage limit reached')
+    expect(alert).toHaveTextContent(retryAfter === '60' ? 'Try again in 60 seconds' : 'Please try again later')
+    expect(alert).not.toHaveTextContent('private detail')
+    expect(screen.getByLabelText('Relationship notes')).toHaveValue('Piano leads.')
+    expect(screen.getByRole('button', { name: 'Remove Piano' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Generate Prompt' })).toBeEnabled()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it('submits actual unusual selections and exact notes; preserves them through loading', async () => {
     const user = renderWorkspace()
     for (const node of [aggressive, ambient, piano]) await collect(user, node.label)
     const notes = 'Piano is foreground.\nKeep the aggressive dreamy contrast; no added drums.'
-    await user.type(screen.getByLabelText('Relationship notes'), notes)
+    // Paste the authored passage as one real input action. Per-character delays
+    // can outlive the test deadline on a busy host and leak into the next test.
+    await user.click(screen.getByLabelText('Relationship notes'))
+    await user.paste(notes)
     let complete!: (response: Response) => void
     fetchMock.mockImplementation(() => new Promise<Response>(resolve => { complete = resolve }))
     await user.click(screen.getByRole('button', { name: 'Generate Prompt' }))

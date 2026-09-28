@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../lib/supabase/client'
@@ -25,7 +25,17 @@ export default function Workspace({ discoveryNodes, affinities }: {
   const [error, setError] = useState('')
   const [copyStatus, setCopyStatus] = useState('')
   const requestInFlight = useRef(false)
+  const generateButton = useRef<HTMLButtonElement>(null)
+  const restoreGenerateFocus = useRef(false)
   const router = useRouter()
+
+  useEffect(() => {
+    if (isGenerating || !restoreGenerateFocus.current) return
+    restoreGenerateFocus.current = false
+    // Native disabled buttons lose keyboard focus. Restore it after the request
+    // only if the user has not moved focus to another control while waiting.
+    if (document.activeElement === document.body) generateButton.current?.focus()
+  }, [isGenerating])
 
   const clearCandidate = useCallback(() => {
     setResult(null)
@@ -59,6 +69,7 @@ export default function Workspace({ discoveryNodes, affinities }: {
 
   const handleGenerate = async () => {
     if (requestInFlight.current || selectedNodes.length === 0) return
+    restoreGenerateFocus.current = document.activeElement === generateButton.current
     requestInFlight.current = true
     setIsGenerating(true)
     clearCandidate()
@@ -68,6 +79,13 @@ export default function Workspace({ discoveryNodes, affinities }: {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nodes: selectedNodes, relationship_notes: relationshipNotes }),
       })
+      if (response.status === 429) {
+        const seconds = Number(response.headers.get('Retry-After'))
+        const retry = Number.isSafeInteger(seconds) && seconds > 0 && seconds <= 2_678_400
+          ? `Try again in ${seconds} seconds.` : 'Please try again later.'
+        setError(`Compiler usage limit reached. ${retry} Your nodes and notes are still here.`)
+        return
+      }
       if (!response.ok) throw new Error('Could not compile your prompt. Your nodes and notes are still here. Please try again.')
       const compiled = parseCompilerOutput(await response.json(), selectedNodes)
       setResult(compiled)
@@ -143,7 +161,7 @@ export default function Workspace({ discoveryNodes, affinities }: {
           </section>
         )}
 
-        <button onClick={handleGenerate} disabled={isGenerating || selectedNodes.length === 0} className={`min-h-12 rounded-md bg-yellow-300 px-4 py-3 text-sm font-semibold text-black hover:bg-yellow-200 disabled:opacity-50 ${focusStyle}`}>
+        <button ref={generateButton} onClick={handleGenerate} disabled={isGenerating || selectedNodes.length === 0} className={`min-h-12 rounded-md bg-yellow-300 px-4 py-3 text-sm font-semibold text-black hover:bg-yellow-200 disabled:opacity-50 ${focusStyle}`}>
           {isGenerating ? 'Crafting Prompt…' : result?.status === 'needs_clarification' ? 'Compile with clarification' : 'Generate Prompt'}
         </button>
         {isGenerating && <p role="status" className="text-sm text-gray-300">Compiling your selected nodes and notes…</p>}

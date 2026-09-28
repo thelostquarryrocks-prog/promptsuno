@@ -4,6 +4,7 @@ import { resolveCompilerInput } from '../../../lib/sound-brain-catalog';
 import { parseCompilerOutput, type CompilerInput } from '../../../lib/compiler-contract';
 import { createClient } from '../../../lib/supabase/server';
 import { CompilerRequestError, readCompilerRequest } from '../../../lib/compiler-request';
+import { reserveCompilerAttempt } from '../../../lib/compiler-quota';
 
 const SYSTEM_PROMPT = `You are the musical-intent writer for the PromptSuno.com Prompt Generator. Convert the supplied structured musical intent into a concise, editable Styles prompt. You describe a request; you do not generate audio, control Suno, know its hidden parser, or promise adherence.
 
@@ -32,13 +33,14 @@ Examples are illustrative, not model or Suno test results:
 Styles is a new candidate only. Do not say it has been applied, copied, saved or billed. The application owns those actions. All uncertain choices remain explicit; never claim that a pleasing text prompt has been validated on audio.`;
 
 export async function POST(req: Request) {
-  const json = (body: unknown, status = 200) => NextResponse.json(body, {
-    status, headers: { 'Cache-Control': 'private, no-store' },
+  const json = (body: unknown, status = 200, headers: Record<string, string> = {}) => NextResponse.json(body, {
+    status, headers: { 'Cache-Control': 'private, no-store', ...headers },
   });
   // Verify with Supabase Auth, never trust getSession(), body IDs or identity headers.
   // This check lives at the paid entry point, independent of workspace middleware.
+  let supabase: Awaited<ReturnType<typeof createClient>>;
   try {
-    const supabase = await createClient();
+    supabase = await createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error || !user?.id) {
       return json({ error: 'Sign in again to compile your prompt.' }, 401);
@@ -55,6 +57,18 @@ export async function POST(req: Request) {
   }
   if (!process.env.OPENAI_API_KEY) {
     return json({ error: 'The prompt compiler is unavailable. Please try again later.' }, 503);
+  }
+  try {
+    const reservation = await reserveCompilerAttempt(supabase);
+    if (!reservation.allowed) {
+      return json({
+        error: `Compiler usage limit reached. Try again in ${reservation.retryAfterSeconds} seconds. Your nodes and notes are unchanged.`,
+        retry_after_seconds: reservation.retryAfterSeconds,
+      }, 429, { 'Retry-After': String(reservation.retryAfterSeconds) });
+    }
+  } catch {
+    // A timeout may have committed: do not retry/refund or attempt the provider.
+    return json({ error: 'Compiler usage checks are unavailable. Please try again later.' }, 503);
   }
   try {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0, timeout: 30_000 });

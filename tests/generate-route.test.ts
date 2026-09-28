@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { POST } from '../src/app/api/generate/route'
 import { MAX_COMPILER_BODY_BYTES, MAX_RELATIONSHIP_NOTES_BYTES } from '../src/lib/compiler-request'
 
-const { createCompletion, constructProvider, getUser, createClient } = vi.hoisted(() => ({
+const { createCompletion, constructProvider, getUser, createClient, rpc, abortSignal } = vi.hoisted(() => ({
   createCompletion: vi.fn(), constructProvider: vi.fn(), getUser: vi.fn(), createClient: vi.fn(),
+  rpc: vi.fn(), abortSignal: vi.fn(),
 }))
 vi.mock('../src/lib/supabase/server', () => ({ createClient }))
 vi.mock('openai', () => ({
@@ -27,7 +28,9 @@ beforeEach(() => {
   vi.stubEnv('OPENAI_API_KEY', 'unit-test-placeholder')
   createCompletion.mockReset()
   constructProvider.mockReset()
-  createClient.mockReset().mockResolvedValue({ auth: { getUser } })
+  rpc.mockReset().mockReturnValue({ abortSignal })
+  abortSignal.mockReset().mockResolvedValue({ data: { allowed: true, retry_after_seconds: 0 }, error: null })
+  createClient.mockReset().mockResolvedValue({ auth: { getUser }, rpc })
   getUser.mockReset().mockResolvedValue({ data: { user: { id: 'verified-server-user' } }, error: null })
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })
@@ -39,6 +42,9 @@ describe('existing Luna compiler API', () => {
     expect(response.status).toBe(200)
     expect(getUser).toHaveBeenCalledExactlyOnceWith()
     expect(getUser.mock.invocationCallOrder[0]).toBeLessThan(constructProvider.mock.invocationCallOrder[0])
+    expect(rpc).toHaveBeenCalledExactlyOnceWith('reserve_compiler_attempt')
+    expect(getUser.mock.invocationCallOrder[0]).toBeLessThan(rpc.mock.invocationCallOrder[0])
+    expect(abortSignal.mock.invocationCallOrder[0]).toBeLessThan(constructProvider.mock.invocationCallOrder[0])
     expect(constructProvider).toHaveBeenCalledWith({ apiKey: 'unit-test-placeholder', maxRetries: 0, timeout: 30_000 })
     expect(response.headers.get('cache-control')).toBe('private, no-store')
     expect(await response.json()).toEqual(ready)
@@ -102,6 +108,7 @@ describe('paid compiler request boundary', () => {
     expect(response.status).toBe(401)
     expect(response.headers.get('cache-control')).toContain('no-store')
     expect(req.bodyUsed).toBe(false)
+    expect(rpc).not.toHaveBeenCalled()
     expect(constructProvider).not.toHaveBeenCalled()
     expect(createCompletion).not.toHaveBeenCalled()
   })
@@ -200,5 +207,112 @@ describe('paid compiler request boundary', () => {
     req.headers.set('origin', 'http://127.0.0.1:3131')
     expect((await POST(req)).status).toBe(200)
     expect(createCompletion).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('durable quota integration (RPC responses simulated)', () => {
+  it('returns 429 with database Retry-After and never constructs a model client', async () => {
+    abortSignal.mockResolvedValue({ data: { allowed: false, retry_after_seconds: 86400 }, error: null })
+    const response = await POST(request(input))
+    expect(response.status).toBe(429)
+    expect(response.headers.get('retry-after')).toBe('86400')
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
+    expect(await response.json()).toMatchObject({ retry_after_seconds: 86400, error: expect.stringContaining('usage limit') })
+    expect(createCompletion).not.toHaveBeenCalled()
+    expect(constructProvider).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['missing policy', { data: null, error: { code: '55000', message: 'private configuration' } }],
+    ['missing migration', { data: null, error: { code: 'PGRST202' } }],
+    ['database outage', { data: null, error: { message: 'private database details' } }],
+    ['error with apparent allowance', { data: { allowed: true, retry_after_seconds: 0 }, error: { code: 'failure' } }],
+    ['empty result', { data: null, error: null }],
+    ['incorrect shape', { data: [{ allowed: true, retry_after_seconds: 0 }], error: null }],
+    ['truthy allowance', { data: { allowed: 'true', retry_after_seconds: 0 }, error: null }],
+    ['missing retry', { data: { allowed: false }, error: null }],
+    ['invalid retry', { data: { allowed: false, retry_after_seconds: -1 }, error: null }],
+    ['fractional retry', { data: { allowed: false, retry_after_seconds: 1.5 }, error: null }],
+    ['excessive retry', { data: { allowed: false, retry_after_seconds: 2678401 }, error: null }],
+  ])('fails closed for %s in production without a model call', async (_label, result) => {
+    vi.stubEnv('NODE_ENV', 'production')
+    abortSignal.mockResolvedValue(result)
+    const response = await POST(request(input))
+    expect(response.status).toBe(503)
+    expect(await response.json()).toEqual({ error: 'Compiler usage checks are unavailable. Please try again later.' })
+    expect(createCompletion).not.toHaveBeenCalled()
+    expect(constructProvider).not.toHaveBeenCalled()
+  })
+
+  it('does not retry an ambiguous database timeout', async () => {
+    abortSignal.mockRejectedValue(new DOMException('private timeout', 'TimeoutError'))
+    expect((await POST(request(input))).status).toBe(503)
+    expect(rpc).toHaveBeenCalledTimes(1)
+    expect(abortSignal.mock.calls[0][0]).toBeInstanceOf(AbortSignal)
+    expect(createCompletion).not.toHaveBeenCalled()
+  })
+
+  it.each(['user_id', 'burst_limit', 'sustained_limit', 'window_seconds'])('rejects client %s overrides without reserving or calling the model', async key => {
+    expect((await POST(request({ ...input, [key]: 'forged' }))).status).toBe(400)
+    expect(rpc).not.toHaveBeenCalled()
+    expect(createCompletion).not.toHaveBeenCalled()
+  })
+
+  it('uses only the verified cookie client RPC and sends no identity, allowance or authored data', async () => {
+    createCompletion.mockResolvedValue({ choices: [{ message: { content: JSON.stringify(ready) } }] })
+    const req = request(input)
+    req.headers.set('x-user-id', 'victim')
+    req.headers.set('x-quota-limit', '999999')
+    expect((await POST(req)).status).toBe(200)
+    expect(rpc).toHaveBeenCalledExactlyOnceWith('reserve_compiler_attempt')
+  })
+
+  it('keeps a reservation on provider failure; a manual retry must reserve again', async () => {
+    abortSignal.mockResolvedValueOnce({ data: { allowed: true, retry_after_seconds: 0 }, error: null })
+      .mockResolvedValue({ data: { allowed: false, retry_after_seconds: 30 }, error: null })
+    createCompletion.mockRejectedValue(new Error('provider timeout'))
+    expect((await POST(request(input))).status).toBe(502)
+    expect((await POST(request(input))).status).toBe(429)
+    expect(rpc.mock.calls).toEqual([['reserve_compiler_attempt'], ['reserve_compiler_attempt']])
+    expect(createCompletion).toHaveBeenCalledTimes(1)
+  })
+
+  it('waits for committed reservation before making any model call', async () => {
+    let resolveReservation!: (value: unknown) => void
+    abortSignal.mockReturnValue(new Promise(resolve => { resolveReservation = resolve }))
+    createCompletion.mockResolvedValue({ choices: [{ message: { content: JSON.stringify(ready) } }] })
+    const pending = POST(request(input))
+    await vi.waitFor(() => expect(abortSignal).toHaveBeenCalledTimes(1))
+    expect(createCompletion).not.toHaveBeenCalled()
+    resolveReservation({ data: { allowed: true, retry_after_seconds: 0 }, error: null })
+    expect((await pending).status).toBe(200)
+  })
+
+  it('honors shared RPC decisions for concurrent requests across separate clients and users', async () => {
+    // A mock atomic store tests route wiring, NOT PostgreSQL locking or isolation.
+    const used = new Map<string, number>()
+    const users = Array.from({ length: 24 }, (_, index) => index % 2 ? 'user-a' : 'user-b')
+    createClient.mockImplementation(async () => {
+      const id = users.shift()!
+      return {
+        auth: { getUser: async () => ({ data: { user: { id } }, error: null }) },
+        rpc: (name: string) => {
+          expect(name).toBe('reserve_compiler_attempt')
+          return { abortSignal: async () => {
+            await new Promise(resolve => setTimeout(resolve, 1))
+            const count = used.get(id) ?? 0
+            const allowed = count < 3
+            if (allowed) used.set(id, count + 1)
+            return { data: { allowed, retry_after_seconds: allowed ? 0 : 60 }, error: null }
+          } }
+        },
+      }
+    })
+    createCompletion.mockResolvedValue({ choices: [{ message: { content: JSON.stringify(ready) } }] })
+    const results = await Promise.all(Array.from({ length: 24 }, () => POST(request(input))))
+    expect(results.filter(result => result.status === 200)).toHaveLength(6)
+    expect(results.filter(result => result.status === 429)).toHaveLength(18)
+    expect(used).toEqual(new Map([['user-a', 3], ['user-b', 3]]))
+    expect(createCompletion).toHaveBeenCalledTimes(6)
   })
 })

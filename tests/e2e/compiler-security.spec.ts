@@ -46,7 +46,7 @@ test('browser session reaches the guarded compiler; revoked session preserves no
   await page.getByRole('button', { name: 'Generate Prompt' }).click()
   expect((await response).status()).toBe(200)
   await expect(page.getByLabel('Editable Styles prompt')).toHaveValue('Fixture Styles from exact authored intent.')
-  expect(await stats()).toEqual({ modelCalls: before + 1, lastIntent: input })
+  expect(await stats()).toMatchObject({ modelCalls: before + 1, lastIntent: input })
 
   // No route interception: these requests go through the built Next.js route.
   for (const invalid of [{ ...input, user_id: 'forged' }, { ...input, relationship_notes: 'x'.repeat(16385) }, { ...input, affinities: { piano: 1 } }]) {

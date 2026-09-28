@@ -3,6 +3,14 @@
 Status: authentication and bounded input implementation; **HOSTING BLOCKED**.
 This is not production acceptance, merge authorization or deployment approval.
 
+Current quota update (2026-09-28): the authorized local successor branch
+`codex/atomic-compiler-quota` implements the proposal below. See
+[Atomic-Compiler-Quota.md](Atomic-Compiler-Quota.md) for corrections, migration,
+configuration, verification limits and hosting gates. The remaining sections
+record the authentication work at `54dd77ff63f0b1a21d176af5f2e6bedf73c60b2e`;
+their statements that quota is unimplemented describe that historical base.
+No remote migration or deployment has been performed.
+
 ## Scope and authority
 
 - Base: `codex/sound-brain-compiler-bridge` at exact green PR #2 head

@@ -18,6 +18,9 @@ const issuedTokens = new Set()
 let sessionActive = false
 let modelCalls = 0
 let lastIntent = null
+let quotaUsed = 0
+let quotaLimit = 10000
+let quotaMode = 'normal'
 
 const fixture = http.createServer((request, response) => {
   response.setHeader('Access-Control-Allow-Origin', 'http://127.0.0.1:3131')
@@ -26,7 +29,25 @@ const fixture = http.createServer((request, response) => {
   response.setHeader('Content-Type', 'application/json')
   if (request.method === 'OPTIONS') { response.writeHead(204); response.end(); return }
   if (request.url === '/__fixture/stats') {
-    response.end(JSON.stringify({ modelCalls, lastIntent }))
+    response.end(JSON.stringify({ modelCalls, lastIntent, quotaUsed }))
+  } else if (request.url?.startsWith('/__fixture/quota') && request.method === 'POST') {
+    const settings = new URL(request.url, 'http://127.0.0.1:3132')
+    quotaUsed = 0
+    quotaLimit = Number(settings.searchParams.get('limit') ?? 10000)
+    quotaMode = settings.searchParams.get('mode') ?? 'normal'
+    response.end('{}')
+  } else if (request.url === '/rest/v1/rpc/reserve_compiler_attempt' && request.method === 'POST') {
+    const token = request.headers.authorization?.replace(/^Bearer /, '')
+    if (!sessionActive || !issuedTokens.has(token)) {
+      response.writeHead(401); response.end('{}'); return
+    }
+    if (['store-error', 'missing-policy'].includes(quotaMode)) {
+      response.writeHead(503); response.end(JSON.stringify({ code: '55000', message: 'Fixture quota unavailable' })); return
+    }
+    // HTTP fixture, NOT a proof of database concurrency or grants.
+    const allowed = quotaUsed < quotaLimit
+    if (allowed) quotaUsed += 1
+    response.end(JSON.stringify({ allowed, retry_after_seconds: allowed ? 0 : 60 }))
   } else if (request.url === '/__fixture/revoke' && request.method === 'POST') {
     sessionActive = false
     response.end('{}')
@@ -50,6 +71,9 @@ const fixture = http.createServer((request, response) => {
     response.end('{}')
   } else if (request.url === '/v1/chat/completions' && request.method === 'POST') {
     modelCalls += 1
+    if (quotaMode === 'provider-failure') {
+      response.writeHead(500); response.end(JSON.stringify({ error: { message: 'Fixture provider failure' } })); return
+    }
     let body = ''
     request.on('data', chunk => { body += chunk })
     request.on('end', () => {

@@ -16,8 +16,10 @@ async function login(page: Page) {
   await page.getByLabel('Email address').fill('test@example.invalid')
   await page.getByLabel('Password').fill('local-test-only')
   await page.getByRole('button', { name: 'Sign In', exact: true }).click()
-  await expect(page).toHaveURL(/\/workspace$/)
-  await expect(page.getByText('Choose nodes without dragging')).toBeVisible()
+  // Auth navigation and the lazy WebGL bundle can exceed five seconds on this
+  // local browser host. Bound setup separately; interaction assertions stay unchanged.
+  await expect(page).toHaveURL(/\/workspace$/, { timeout: 30_000 })
+  await expect(page.getByText('Choose nodes without dragging')).toBeVisible({ timeout: 30_000 })
 }
 
 test('selection, authored notes, loading, error retry, clarification, edited copy/export, and keyboard removal', async ({ page, context }, testInfo) => {

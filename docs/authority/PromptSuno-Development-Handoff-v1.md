@@ -248,3 +248,22 @@ projects or deployments were created. PR #2 and PR #3 are unchanged.
 See [Paid-Compiler-Security.md](../implementation/Paid-Compiler-Security.md) for
 the security boundary, concrete Supabase limiter proposal, verification evidence
 and remaining deployment gates. Earlier bridge evidence remains historical.
+
+## Implementation update — 2026-09-28 atomic compiler quota
+
+On local branch `codex/atomic-compiler-quota`, based on authentication head
+`54dd77ff63f0b1a21d176af5f2e6bedf73c60b2e`, the compiler reserves an attempt
+through the same verified Supabase session before constructing the paid model
+client. `public.reserve_compiler_attempt()` takes no arguments and uses
+`auth.uid()`. A private operator-configured policy and one locked row per user
+enforce both burst and sustained windows atomically. No privileged database
+credential is added. Provider failure retains consumption; retries reserve anew.
+Exhaustion returns 429 plus Retry-After; unavailable/missing configuration fails
+closed with 503 in every environment. Workspace displays the quota retry delay.
+
+This supersedes the earlier statement that no quota implementation exists on
+this successor branch. The migration has NOT been applied remotely. Numerical
+allowances remain an operator decision, not a free/premium entitlement. Hosting
+remains blocked pending database verification, migration/configuration approval,
+real-account acceptance, operational spend controls and separate deployment
+authorization. See [Atomic-Compiler-Quota.md](../implementation/Atomic-Compiler-Quota.md).
