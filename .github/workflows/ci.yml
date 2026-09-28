@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Build, types, lint and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      # Public local fixtures only; never pull deployment credentials into CI.
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:3132
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: local-fixture-placeholder
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.12.0'
+          cache: npm
+      - name: Install locked dependencies
+        id: install
+        run: npm ci --no-audit --no-fund
+      - name: Detect repository test commands
+        id: scripts
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from 'node:fs';
+          import { createRequire } from 'node:module';
+          const { scripts } = createRequire(import.meta.url)('./package.json');
+          for (const name of ['typecheck', 'test', 'test:e2e']) {
+            appendFileSync(process.env.GITHUB_OUTPUT, `${name.replace(':', '_')}=${Boolean(scripts[name])}\n`);
+            if (!scripts[name]) console.log(`::notice::No ${name} script on this revision. Main has no tests yet; PR #2 supplies the test suites.`);
+          }
+          NODE
+      # Independent checks still run after a failure; no failed step is forgiven.
+      - name: Lint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run lint
+      - name: Typecheck
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          if [ '${{ steps.scripts.outputs.typecheck }}' = 'true' ]; then
+            npm run typecheck
+          else
+            ./node_modules/.bin/next typegen
+            ./node_modules/.bin/tsc --noEmit
+          fi
+      - name: Unit, API and component tests
+        if: ${{ !cancelled() && steps.install.outcome == 'success' && steps.scripts.outputs.test == 'true' }}
+        run: npm test
+      - name: Production build
+        id: build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          # Main eagerly constructs the SDK during build. This cannot authenticate;
+          # it is scoped to compilation and is absent from unit/browser test steps.
+          OPENAI_API_KEY: ci-build-placeholder-not-a-credential
+        run: npm run build
+      - name: Install browser test dependencies
+        id: browsers
+        if: ${{ !cancelled() && steps.build.outcome == 'success' && steps.scripts.outputs.test_e2e == 'true' }}
+        run: ./node_modules/.bin/playwright install --with-deps chromium webkit
+      - name: Browser tests
+        id: e2e
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' && steps.scripts.outputs.test_e2e == 'true' }}
+        run: npm run test:e2e
+      - name: Preserve browser failure evidence
+        if: ${{ !cancelled() && steps.e2e.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: browser-failure-evidence
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
