@@ -223,3 +223,28 @@ and `npm.cmd run test:e2e` (after build). Browser tests use local Supabase fixtu
 through the existing login/middleware and controlled compiler responses. They do
 not configure real accounts or establish physical-device/Suno-audio acceptance.
 Local traces, screenshots, and failure receipts are excluded from commits.
+
+## Implementation update — 2026-09-28 paid compiler authentication
+
+On `codex/paid-compiler-auth`, based exactly on bridge head
+`3d44bfdb6ee4e6f44a65faf4c30cea26df58861a`, `/api/generate` now verifies the
+cookie session with Supabase Auth `getUser()` before reading input or creating
+the model client. The route owns authentication independently of middleware.
+Missing, invalid and expired sessions return JSON 401; auth setup/verification
+exceptions fail closed with 503. Client user IDs cannot establish identity.
+
+The API accepts JSON from the same browser origin (originless non-browser JSON
+requests still require a verified cookie session). Application resource bounds
+are 256 KiB of actual request bytes, 16 KiB of UTF-8 relationship notes, and no
+more nodes than the catalog contains. These are application safety limits, not
+Suno prompt-length rules. Accepted notes, punctuation, whitespace and selected
+catalog identities are unchanged. Matrix strengths remain visual-only.
+
+**Hosting is blocked pending approval and implementation of durable cost
+controls and real Supabase session acceptance.** No durable limiter or 429 quota
+response is implemented. No database migrations, credentials, policies, Vercel
+projects or deployments were created. PR #2 and PR #3 are unchanged.
+
+See [Paid-Compiler-Security.md](../implementation/Paid-Compiler-Security.md) for
+the security boundary, concrete Supabase limiter proposal, verification evidence
+and remaining deployment gates. Earlier bridge evidence remains historical.

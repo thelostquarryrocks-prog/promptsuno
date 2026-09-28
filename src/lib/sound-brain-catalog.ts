@@ -2,6 +2,7 @@
 import catalog from '../../data/sound-brain/suno-style-catalog-v1.json'
 import matrix from '../../data/sound-brain/suno-style-matrix-v1.json'
 import { hasExactKeys, isRecord, type CompilerInput, type DiscoveryAffinities, type SelectedNode } from './compiler-contract'
+import { MAX_RELATIONSHIP_NOTES_BYTES } from './compiler-request'
 
 const catalogById = new Map(catalog.terms.map(term => [term.id, term]))
 
@@ -36,8 +37,9 @@ export function getSoundBrainDiscovery() {
 
 export function resolveCompilerInput(value: unknown): CompilerInput {
   if (!isRecord(value) || !hasExactKeys(value, ['nodes', 'relationship_notes'])
-    || !Array.isArray(value.nodes) || value.nodes.length === 0
-    || typeof value.relationship_notes !== 'string') {
+    || !Array.isArray(value.nodes) || value.nodes.length === 0 || value.nodes.length > catalogById.size
+    || typeof value.relationship_notes !== 'string'
+    || new TextEncoder().encode(value.relationship_notes).byteLength > MAX_RELATIONSHIP_NOTES_BYTES) {
     throw new Error('Select at least one catalog node and supply relationship notes as text.')
   }
   const seenIds = new Set<string>()

@@ -2,6 +2,10 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  // The paid route owns verification and JSON failures, including config outages.
+  // Avoid a second auth/refresh attempt or middleware redirect before its guard.
+  if (request.nextUrl.pathname === '/api/generate') return NextResponse.next({ request })
+
   let supabaseResponse = NextResponse.next({
     request,
   })

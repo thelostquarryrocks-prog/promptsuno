@@ -2,6 +2,8 @@ import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { resolveCompilerInput } from '../../../lib/sound-brain-catalog';
 import { parseCompilerOutput, type CompilerInput } from '../../../lib/compiler-contract';
+import { createClient } from '../../../lib/supabase/server';
+import { CompilerRequestError, readCompilerRequest } from '../../../lib/compiler-request';
 
 const SYSTEM_PROMPT = `You are the musical-intent writer for the PromptSuno.com Prompt Generator. Convert the supplied structured musical intent into a concise, editable Styles prompt. You describe a request; you do not generate audio, control Suno, know its hidden parser, or promise adherence.
 
@@ -30,17 +32,32 @@ Examples are illustrative, not model or Suno test results:
 Styles is a new candidate only. Do not say it has been applied, copied, saved or billed. The application owns those actions. All uncertain choices remain explicit; never claim that a pleasing text prompt has been validated on audio.`;
 
 export async function POST(req: Request) {
+  const json = (body: unknown, status = 200) => NextResponse.json(body, {
+    status, headers: { 'Cache-Control': 'private, no-store' },
+  });
+  // Verify with Supabase Auth, never trust getSession(), body IDs or identity headers.
+  // This check lives at the paid entry point, independent of workspace middleware.
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user?.id) {
+      return json({ error: 'Sign in again to compile your prompt.' }, 401);
+    }
+  } catch {
+    return json({ error: 'Authentication is unavailable. Please try again later.' }, 503);
+  }
   let intentPayload: CompilerInput;
   try {
-    intentPayload = resolveCompilerInput(await req.json());
-  } catch {
-    return NextResponse.json({ error: 'Invalid musical intent. Submit exact catalog records and relationship notes.' }, { status: 400 });
+    intentPayload = resolveCompilerInput(await readCompilerRequest(req));
+  } catch (error) {
+    if (error instanceof CompilerRequestError) return json({ error: error.message }, error.status);
+    return json({ error: 'Invalid musical intent. Submit exact catalog records and relationship notes within the application input limit.' }, 400);
   }
   if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json({ error: 'The prompt compiler is unavailable. Please try again later.' }, { status: 503 });
+    return json({ error: 'The prompt compiler is unavailable. Please try again later.' }, 503);
   }
   try {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0, timeout: 30_000 });
     const response = await openai.chat.completions.create({
       model: 'gpt-5.6-luna',
       messages: [
@@ -84,11 +101,11 @@ export async function POST(req: Request) {
 
     const result = response.choices[0]?.message.content;
     const compiled = parseCompilerOutput(JSON.parse(result || '{}'), intentPayload.nodes);
-    return NextResponse.json(compiled);
+    return json(compiled);
     
   } catch {
     // Provider errors can contain request/user data; keep diagnostics credential-free.
     console.error('Luna compiler request failed');
-    return NextResponse.json({ error: 'Failed to compile intent' }, { status: 502 });
+    return json({ error: 'Failed to compile intent' }, 502);
   }
 }

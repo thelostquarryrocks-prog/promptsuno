@@ -1,5 +1,10 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+**Hosting blocked:** the paid compiler now requires a verified Supabase session,
+but durable per-user cost controls and real-account acceptance remain outstanding.
+Do not follow the deployment instructions below until those gates are approved
+and satisfied. See [paid compiler security and verification](docs/implementation/Paid-Compiler-Security.md).
+
 ## Getting Started
 
 First, run the development server:

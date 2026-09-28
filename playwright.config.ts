@@ -23,7 +23,7 @@ export default defineConfig({
     command: 'node tests/e2e/server.mjs',
     env: { TEST_SERVER_MODE: 'production' },
     url: 'http://127.0.0.1:3131/login',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 180000,
   },
 })
