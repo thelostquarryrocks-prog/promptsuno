@@ -33,10 +33,17 @@ through pipefail; no check is weakened or retried into a pass.
 
 The [staging approval packet](Compiler-Quota-Staging-Approval.md) records the
 unchanged migration hash, proposed private policy, target evidence gaps,
-read-only preflight, application/verification sequence and rollback. The exact
-staging target is not designated; this is a blocking approval-packet field,
-not permission to select a project. Hosted evidence will be linked in the draft
-PR after its final head completes. Earlier failed/aborted local receipts remain
+read-only preflight, application/verification sequence and rollback. The user
+subsequently designated staging project `mtzrvekmsmpflbsqgpcc` via its Supabase
+endpoint. Its dashboard requires sign-in; credential-free REST inspection
+returns 401. Target ownership, migration history, schema exposure, Auth/JWT and
+grants remain unverified pending authenticated read-only access. Initial hosted
+CI run [36445287563](https://github.com/thelostquarryrocks-prog/promptsuno/actions/runs/36445287563)
+was green at publication commit `56eb1e7f166725f614d387f5088ca9a89c3676b1`:
+PostgreSQL 17.11 17/17, units 95/95, browsers 21/21, typecheck/build successful;
+0 failures/skips, 0 build errors/warnings and 2 existing lint warnings. The
+synthetic stacked merge tree matched that head exactly. Final-head hosted
+evidence is maintained in the draft PR description. Earlier failed/aborted local receipts remain
 preserved under their original ignored verification directories.
 
 Publication-local checks (`.verification/quota-publish/`): unchanged real harness

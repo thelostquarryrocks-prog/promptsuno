@@ -6,19 +6,36 @@ paid model calls, Vercel linking/deployment, promotion or merge.
 
 ## Target and observed facts
 
-**Exact intended Supabase staging target: NOT DESIGNATED.** No project ref,
-dashboard URL, environment designation or linked project is recorded in the
-repository. Inspection found only `supabase/migrations/`, no Supabase config or
-link metadata, no local `.env*` file, no Supabase CLI on PATH, and no Supabase or
-database credential environment variable names. No Supabase connector is
-available in this session. The operator was asked for the exact staging target.
-The presence of another accessible project would not establish its intended use.
+The user explicitly designated this staging target on 2026-09-28:
 
-No remote project was contacted. Project identity/region, PostgreSQL version,
-migration history, object ownership/default ACLs, exposed schemas, Auth/JWT
-configuration, authenticator memberships and relevant grants are **unverified**.
-Local PostgreSQL 17 tests use an Auth shim and cannot establish these facts.
-Approval is incomplete until the exact target and read-only preflight are recorded.
+- Project ref: **`mtzrvekmsmpflbsqgpcc`**.
+- Project endpoint: [designated Supabase target](https://mtzrvekmsmpflbsqgpcc.supabase.co).
+- Dashboard: [exact project](https://supabase.com/dashboard/project/mtzrvekmsmpflbsqgpcc).
+- Human-readable project name, organization and region: **not observed**.
+
+Observed read-only access: the exact dashboard redirects to Supabase sign-in
+with this project as its return target. A credential-free GET to `/rest/v1/`
+on the designated endpoint returned HTTP 401, `No API key found in request`.
+This proves a responding protected API gateway, not project ownership or SQL
+configuration. No API key was supplied and no RPC/model/mutation was invoked.
+The operator was asked to sign in through the UI without sharing credentials.
+
+Repository inspection found only `supabase/migrations/`, no Supabase config/link
+metadata, no local `.env*`, no Supabase CLI on PATH, and no Supabase/database
+credential environment variable names. No Supabase connector is available.
+Authenticated inspection is blocked by the dashboard sign-in and absent
+management/database access. Migration history, object ownership/default ACLs,
+exposed schemas, Auth/JWT setup, authenticator memberships, grants, database
+version and region remain **unverified**, rather than assumed from local tests.
+Approval is incomplete until read-only preflight confirms the designated target.
+Local PostgreSQL 17 uses an Auth shim and cannot establish these target facts.
+
+Publication evidence: [stacked draft PR #4](https://github.com/thelostquarryrocks-prog/promptsuno/pull/4)
+contains the exact base/head and reviewed CI receipts. The initial
+[hosted CI run](https://github.com/thelostquarryrocks-prog/promptsuno/actions/runs/36445287563)
+passed real PostgreSQL 17.11 17/17, units 95/95 and browsers 21/21; build and
+typecheck passed. Final-head evidence is maintained in the draft PR description.
+No hosted fixture result establishes real staging Auth/SQL acceptance.
 
 ## Immutable migration and proposed policy
 
@@ -153,10 +170,10 @@ dependency/data assessment and approval. Remote rollback has not been executed.
 
 ## Exact outstanding decision
 
-Designate and verify the exact staging project first. Then explicitly approve
-application of migration SHA-256
+Complete authenticated read-only preflight for project `mtzrvekmsmpflbsqgpcc`
+first. Then explicitly approve application of migration SHA-256
 `bf5b5ca0a2a6b4519a53e786975e489a809d995d84601d78b95e9d502a3bbd19`
-to that target and, separately, insertion of `(true, 3, 60, 20, 86400)` under the
+to that exact target and, separately, insertion of `(true, 3, 60, 20, 86400)` under the
 reviewed operator, verification and rollback procedure. Resolve signup/global
 spend controls before enabling traffic. No production, entitlement, paid-call,
 Vercel, PR promotion or merge permission is implied.
