@@ -1,47 +1,25 @@
 'use client'
 
 import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Sphere, MeshDistortMaterial, Text } from '@react-three/drei'
-import { useRef, useMemo, useState, useEffect } from 'react'
+/* eslint-disable react-hooks/immutability -- R3F owns mutable animation refs; useFrame updates them without React renders. */
+import { Sphere, MeshDistortMaterial, Text } from '@react-three/drei'
+import { useRef, useMemo, useState, useEffect, type ComponentRef } from 'react'
 import * as THREE from 'three'
-
-// 1. The Relationship Matrix
-const MATRIX: Record<string, Record<string, number>> = {
-  "Cinematic": { "Cello": 0.92, "Dark": 0.88, "Piano": 0.85, "Ethereal Vocals": 0.75, "Sparse Arrangement": 0.45, "Aggressive": 0.35, "808 Drums": 0.10 },
-  "Aggressive": { "Driving Rhythm": 0.95, "808 Drums": 0.90, "Dark": 0.85, "Staccato": 0.75, "Synthwave": 0.60, "Piano": 0.40, "Dreamy Ambient": 0.05, "Ethereal Vocals": 0.08 },
-  "Synthwave": { "808 Drums": 0.95, "Driving Rhythm": 0.88, "Dark": 0.65, "Ethereal Vocals": 0.50, "Staccato": 0.45, "Piano": 0.25, "Cello": 0.10, "Sparse Arrangement": 0.15 },
-  "Dreamy Ambient": { "Ethereal Vocals": 0.95, "Sparse Arrangement": 0.85, "Piano": 0.80, "Cinematic": 0.70, "Cello": 0.65, "Driving Rhythm": 0.15, "Aggressive": 0.02, "808 Drums": 0.05 },
-  "Piano": { "Cinematic": 0.85, "Dreamy Ambient": 0.80, "Sparse Arrangement": 0.75, "Cello": 0.70, "Ethereal Vocals": 0.65, "Staccato": 0.60, "Dark": 0.55, "Aggressive": 0.40 },
-  "808 Drums": { "Synthwave": 0.95, "Aggressive": 0.90, "Driving Rhythm": 0.85, "Dark": 0.70, "Staccato": 0.50, "Sparse Arrangement": 0.20, "Cinematic": 0.10, "Dreamy Ambient": 0.05 },
-  "Sparse Arrangement": { "Dreamy Ambient": 0.85, "Ethereal Vocals": 0.80, "Piano": 0.75, "Cello": 0.70, "Cinematic": 0.45, "Staccato": 0.40, "Driving Rhythm": 0.15, "808 Drums": 0.20 }
-}
-
-const MATRIX_TAGS = ['Cinematic', 'Aggressive', 'Synthwave', 'Dreamy Ambient', 'Piano', '808 Drums', 'Sparse Arrangement', 'Cello', 'Dark', 'Ethereal Vocals', 'Driving Rhythm', 'Staccato']
-
-const TAG_CATEGORIES: Record<string, string> = {
-  'Cinematic': 'genre', 'Synthwave': 'genre', 'Dreamy Ambient': 'genre', 
-  'Dark': 'mood', 'Aggressive': 'mood', 
-  'Piano': 'instrument', '808 Drums': 'instrument', 'Cello': 'instrument', 
-  'Ethereal Vocals': 'vocal', 
-  'Driving Rhythm': 'rhythm', 'Staccato': 'rhythm', 
-  'Sparse Arrangement': 'production'
-}
+import type { DiscoveryAffinities, SelectedNode } from '../lib/compiler-contract'
 
 const BASE_COLOR = new THREE.Color("#ffffff")
 const DIM_COLOR = new THREE.Color("#444444")
 const COLORS: Record<string, THREE.Color> = {
-  genre: new THREE.Color('#fdba74'),
-  mood: new THREE.Color('#93c5fd'),
-  instrument: new THREE.Color('#86efac'),
-  vocal: new THREE.Color('#d8b4fe'),
-  rhythm: new THREE.Color('#fde047'),
-  production: new THREE.Color('#fca5a5')
-}
-
-function getWeight(tagA: string, tagB: string): number {
-  if (MATRIX[tagA]?.[tagB]) return MATRIX[tagA][tagB]
-  if (MATRIX[tagB]?.[tagA]) return MATRIX[tagB][tagA]
-  return 0.20 
+  Genre: new THREE.Color('#fdba74'),
+  Mood: new THREE.Color('#93c5fd'),
+  Instrument: new THREE.Color('#86efac'),
+  Vocal: new THREE.Color('#d8b4fe'),
+  Rhythm: new THREE.Color('#fde047'),
+  Texture: new THREE.Color('#67e8f9'),
+  Production: new THREE.Color('#fca5a5'),
+  Structure: new THREE.Color('#c4b5fd'),
+  Energy: new THREE.Color('#fb7185'),
+  Era: new THREE.Color('#f9a8d4')
 }
 
 type GlobalState = { 
@@ -58,16 +36,16 @@ type GlobalState = {
   gravityMult: number 
 }
 
-function FloatingNode({ id, tag, startZ, globalState, onCatch }: { id: number, tag: string, startZ: number, globalState: React.MutableRefObject<GlobalState>, onCatch: (tag: string) => void }) {
+function FloatingNode({ id, node, startZ, globalState, onCatch, affinities, disabled }: { id: number, node: SelectedNode, startZ: number, globalState: React.RefObject<GlobalState>, onCatch: (node: SelectedNode) => void, affinities: DiscoveryAffinities, disabled: boolean }) {
   const groupRef = useRef<THREE.Group>(null)
-  const textRef = useRef<any>(null)
+  const textRef = useRef<THREE.Mesh & { fillOpacity: number; color: THREE.Color | string }>(null)
   const dotMaterialRef = useRef<THREE.MeshStandardMaterial>(null)
   
-  const baseSpeed = useMemo(() => 1.5 + Math.random() * 1.5, []) 
-  const startX = useMemo(() => (Math.random() - 0.5) * 15, [])
-  const startY = useMemo(() => (Math.random() - 0.5) * 15, [])
+  const [baseSpeed] = useState(() => 1.5 + Math.random() * 1.5)
+  const [startX] = useState(() => (Math.random() - 0.5) * 15)
+  const [startY] = useState(() => (Math.random() - 0.5) * 15)
 
-  const category = TAG_CATEGORIES[tag] || 'genre'
+  const category = node.category
   const targetColor = COLORS[category]
 
   const vec = useMemo(() => new THREE.Vector3(), [])
@@ -106,7 +84,7 @@ function FloatingNode({ id, tag, startZ, globalState, onCatch }: { id: number, t
 
     const intensity = gs.dragIntensity
     const hasActiveNetwork = gs.activeTag !== null
-    const weight = hasActiveNetwork ? getWeight(tag, gs.activeTag!) : 0
+    const weight = hasActiveNetwork ? (affinities[node.node_id]?.[gs.activeTag!] ?? 0.20) : 0
     const isRelated = weight >= 0.70
 
     if (isDraggingMe) {
@@ -169,18 +147,17 @@ function FloatingNode({ id, tag, startZ, globalState, onCatch }: { id: number, t
       ref={groupRef} 
       position={[startX, startY, startZ]}
       onPointerDown={(e) => {
+        if (disabled) return;
         e.stopPropagation();
-        // @ts-ignore
-        e.target.setPointerCapture(e.pointerId);
+        (e.target as Element).setPointerCapture(e.pointerId);
         globalState.current.activeId = id;
-        globalState.current.activeTag = tag;
+        globalState.current.activeTag = node.node_id;
         globalState.current.justClicked = true;
         globalState.current.isDragging = false;
       }}
       onPointerUp={(e) => {
         e.stopPropagation();
-        // @ts-ignore
-        e.target.releasePointerCapture(e.pointerId);
+        (e.target as Element).releasePointerCapture(e.pointerId);
         
         if (groupRef.current && globalState.current.isDragging) {
           const x = groupRef.current.position.x;
@@ -188,7 +165,7 @@ function FloatingNode({ id, tag, startZ, globalState, onCatch }: { id: number, t
           const distanceToCenter = Math.sqrt(x * x + y * y);
           
           if (distanceToCenter < 2.5) {
-            onCatch(tag);
+            onCatch(node);
             groupRef.current.position.z = -20;
             groupRef.current.position.x = (Math.random() - 0.5) * 15;
             groupRef.current.position.y = (Math.random() - 0.5) * 15;
@@ -214,34 +191,34 @@ function FloatingNode({ id, tag, startZ, globalState, onCatch }: { id: number, t
       </Sphere>
       
       <Text ref={textRef} position={[0.3, 0, 0]} fontSize={0.5} color="#ffffff" anchorX="left" anchorY="middle">
-        {tag}
+        {node.label}
       </Text>
     </group>
   )
 }
 
-function NodeSwarm({ onCatch, globalState, density }: { onCatch: (tag: string) => void, globalState: React.MutableRefObject<GlobalState>, density: number }) {
-  const initialNodes = useMemo(() => {
+function NodeSwarm({ onCatch, globalState, density, discoveryNodes, affinities, disabled }: { onCatch: (node: SelectedNode) => void, globalState: React.RefObject<GlobalState>, density: number, discoveryNodes: SelectedNode[], affinities: DiscoveryAffinities, disabled: boolean }) {
+  const [initialNodes] = useState(() => {
     return Array.from({ length: 60 }).map((_, i) => ({
       id: i,
-      tag: MATRIX_TAGS[Math.floor(Math.random() * MATRIX_TAGS.length)],
+      node: discoveryNodes[Math.floor(Math.random() * discoveryNodes.length)],
       startZ: -20 + (Math.random() * 30)
     }))
-  }, [])
+  })
 
   const activeCount = Math.floor(30 * density);
 
   return (
     <>
       {initialNodes.slice(0, activeCount).map((node) => (
-        <FloatingNode key={node.id} id={node.id} tag={node.tag} startZ={node.startZ} globalState={globalState} onCatch={onCatch} />
+        <FloatingNode key={node.id} id={node.id} node={node.node} startZ={node.startZ} globalState={globalState} onCatch={onCatch} affinities={affinities} disabled={disabled} />
       ))}
     </>
   )
 }
 
-function BrainOrb({ collectedTags, gulpTrigger }: { collectedTags: string[], gulpTrigger: { tag: string, ts: number } | null }) {
-  const materialRef = useRef<any>(null)
+function BrainOrb({ collectedTags, gulpTrigger }: { collectedTags: SelectedNode[], gulpTrigger: { node: SelectedNode, ts: number } | null }) {
+  const materialRef = useRef<ComponentRef<typeof MeshDistortMaterial>>(null)
   const meshRef = useRef<THREE.Mesh>(null)
   
   // 1. Calculate blended color based on all active tags
@@ -250,8 +227,8 @@ function BrainOrb({ collectedTags, gulpTrigger }: { collectedTags: string[], gul
     if (collectedTags.length === 0) return new THREE.Color("#4a00e0") 
     
     const blended = new THREE.Color(0, 0, 0)
-    collectedTags.forEach(tag => {
-      const cat = TAG_CATEGORIES[tag] || 'genre'
+    collectedTags.forEach(node => {
+      const cat = node.category
       blended.add(COLORS[cat])
     })
     blended.multiplyScalar(1 / collectedTags.length)
@@ -275,7 +252,7 @@ function BrainOrb({ collectedTags, gulpTrigger }: { collectedTags: string[], gul
     if (gulpTrigger) {
       animState.current.phase = 'shrinking'
       animState.current.timer = 0
-      const cat = TAG_CATEGORIES[gulpTrigger.tag] || 'genre'
+      const cat = gulpTrigger.node.category
       animState.current.flashColor.copy(COLORS[cat])
     }
   }, [gulpTrigger])
@@ -344,9 +321,17 @@ function BrainOrb({ collectedTags, gulpTrigger }: { collectedTags: string[], gul
   )
 }
 
-export default function SoundBrainCanvas() {
-  const [collectedTags, setCollectedTags] = useState<string[]>([])
-  const [gulpTrigger, setGulpTrigger] = useState<{tag: string, ts: number} | null>(null)
+export type SoundBrainCanvasProps = {
+  discoveryNodes: SelectedNode[]
+  affinities: DiscoveryAffinities
+  selectedNodes: SelectedNode[]
+  onCollect: (node: SelectedNode) => void
+  onRemove: (nodeId: string) => void
+  disabled?: boolean
+}
+
+export default function SoundBrainCanvas({ discoveryNodes, affinities, selectedNodes, onCollect, onRemove, disabled = false }: SoundBrainCanvasProps) {
+  const [gulpTrigger, setGulpTrigger] = useState<{node: SelectedNode, ts: number} | null>(null)
   
   const [speed, setSpeed] = useState(1)
   const [density, setDensity] = useState(1)
@@ -363,26 +348,23 @@ export default function SoundBrainCanvas() {
     globalState.current.gravityMult = gravity;
   }, [speed, gravity])
 
-  const handleCatch = (tag: string) => {
-    setCollectedTags((prev) => prev.includes(tag) ? prev : [...prev, tag])
-    setGulpTrigger({ tag, ts: Date.now() })
-  }
-
-  const removeTag = (tagToRemove: string) => {
-    setCollectedTags((prev) => prev.filter(t => t !== tagToRemove))
+  const handleCatch = (node: SelectedNode) => {
+    if (disabled || selectedNodes.some(selected => selected.node_id === node.node_id)) return
+    onCollect(node)
+    setGulpTrigger({ node, ts: Date.now() })
   }
 
   return (
     <div className="w-full flex flex-col space-y-4">
-      <div className="w-full h-[500px] rounded-xl overflow-hidden bg-black border border-gray-800 shadow-2xl relative">
-        <Canvas camera={{ position: [0, 0, 10], fov: 45 }}>
+      <div className="w-full h-[360px] sm:h-[500px] rounded-xl overflow-hidden bg-black border border-gray-800 shadow-2xl relative">
+        <Canvas dpr={[1, 1.5]} aria-label="Drag musical nodes to the central Sound Brain" style={{ touchAction: 'none' }} camera={{ position: [0, 0, 10], fov: 45 }}>
           <ambientLight intensity={0.2} />
           <pointLight position={[0, 0, 0]} intensity={2} color="#8a2be2" />
           <pointLight position={[5, 5, 5]} intensity={0.5} color="#4b0082" />
 
-          <NodeSwarm onCatch={handleCatch} globalState={globalState} density={density} />
+          <NodeSwarm onCatch={handleCatch} globalState={globalState} density={density} discoveryNodes={discoveryNodes} affinities={affinities} disabled={disabled} />
 
-          <BrainOrb collectedTags={collectedTags} gulpTrigger={gulpTrigger} />
+          <BrainOrb collectedTags={selectedNodes} gulpTrigger={gulpTrigger} />
         </Canvas>
         <div className="absolute top-4 left-4 text-[10px] font-mono text-gray-500 pointer-events-none tracking-widest bg-black/50 px-2 py-1 rounded">
           DRAG TO CENTER ORB
@@ -392,30 +374,39 @@ export default function SoundBrainCanvas() {
       <div className="w-full flex justify-between gap-4 px-2">
         <div className="flex flex-col items-center w-1/3">
           <label className="text-[10px] uppercase tracking-widest text-gray-400 mb-1 font-semibold px-2 py-0.5">Speed</label>
-          <input type="range" min="0.2" max="3" step="0.1" value={speed} onChange={(e) => setSpeed(parseFloat(e.target.value))} className="w-full accent-indigo-500 cursor-pointer" />
+          <input aria-label="Speed" type="range" min="0.2" max="3" step="0.1" value={speed} onChange={(e) => setSpeed(parseFloat(e.target.value))} className="w-full accent-indigo-500 cursor-pointer" />
         </div>
         <div className="flex flex-col items-center w-1/3">
           <label className="text-[10px] uppercase tracking-widest text-gray-400 mb-1 font-semibold px-2 py-0.5">Density</label>
-          <input type="range" min="0.5" max="2" step="0.1" value={density} onChange={(e) => setDensity(parseFloat(e.target.value))} className="w-full accent-indigo-500 cursor-pointer" />
+          <input aria-label="Density" type="range" min="0.5" max="2" step="0.1" value={density} onChange={(e) => setDensity(parseFloat(e.target.value))} className="w-full accent-indigo-500 cursor-pointer" />
         </div>
         <div className="flex flex-col items-center w-1/3">
           <label className="text-[10px] uppercase tracking-widest text-gray-400 mb-1 font-semibold px-2 py-0.5">Connection</label>
-          <input type="range" min="0" max="1.5" step="0.1" value={gravity} onChange={(e) => setGravity(parseFloat(e.target.value))} className="w-full accent-indigo-500 cursor-pointer" />
+          <input aria-label="Connection" type="range" min="0" max="1.5" step="0.1" value={gravity} onChange={(e) => setGravity(parseFloat(e.target.value))} className="w-full accent-indigo-500 cursor-pointer" />
         </div>
       </div>
 
-      <div className="w-full min-h-[60px] p-3 rounded-md border border-gray-700 bg-[#1a1a1a] flex flex-wrap gap-2">
-        {collectedTags.length === 0 ? (
+      <details className="rounded-md border border-gray-700 p-3">
+        <summary className="cursor-pointer text-sm text-gray-300 min-h-11 py-2 focus-visible:outline-2 focus-visible:outline-yellow-300">Choose nodes without dragging</summary>
+        <div className="flex flex-wrap gap-2 pt-2">
+          {discoveryNodes.map(node => (
+            <button key={node.node_id} disabled={disabled || selectedNodes.some(selected => selected.node_id === node.node_id)} onClick={() => handleCatch(node)} className="min-h-11 rounded-full border border-gray-600 px-3 text-sm disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-yellow-300">Collect {node.label}</button>
+          ))}
+        </div>
+      </details>
+
+      <div aria-label="Collected nodes" className="w-full min-h-[60px] p-3 rounded-md border border-gray-700 bg-[#1a1a1a] flex flex-wrap gap-2">
+        {selectedNodes.length === 0 ? (
           <span className="text-sm text-gray-500 my-auto italic">Caught nodes will appear here...</span>
         ) : (
-          collectedTags.map((tag, i) => {
-            const category = TAG_CATEGORIES[tag] || 'genre'
+          selectedNodes.map(node => {
+            const category = node.category
             const dotColor = COLORS[category].getHexString()
             return (
-              <span key={i} className="px-3 py-1 bg-black/40 text-sm rounded-full border border-gray-700 flex items-center gap-2 shadow-sm text-white">
+              <span key={node.node_id} data-node-id={node.node_id} className="px-3 py-1 bg-black/40 text-sm rounded-full border border-gray-700 flex items-center gap-2 shadow-sm text-white">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: `#${dotColor}`, boxShadow: `0 0 5px #${dotColor}` }}></div>
-                {tag}
-                <button onClick={() => removeTag(tag)} className="text-gray-400 hover:text-white transition-colors text-lg leading-none mb-[2px]">×</button>
+                {node.label}
+                <button aria-label={`Remove ${node.label}`} disabled={disabled} onClick={() => onRemove(node.node_id)} className="text-gray-400 hover:text-white transition-colors text-lg leading-none min-h-11 min-w-11 focus-visible:outline-2 focus-visible:outline-yellow-300">×</button>
               </span>
             )
           })

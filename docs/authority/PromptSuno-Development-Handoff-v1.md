@@ -186,3 +186,40 @@ Do not expand this task into:
 - saved projects/history
 - premium gating redesign
 - broad Three.js refactor
+
+## Implementation update — 2026-09-27 selection-to-compiler bridge
+
+The baseline and integration gap above are retained as historical implementation
+context. This update supersedes the stated gap and immediate post-migration task
+on `codex/sound-brain-compiler-bridge`; it does not claim a merge to `main` or deployment.
+
+- `src/app/workspace/page.tsx` now projects the existing 12 discovery concepts from
+  the current catalog and matrix on the server, then mounts `Workspace`.
+- `src/components/Workspace.tsx` owns canonical selected records, authored
+  relationship notes, compile/fetch, loading/errors, clarification, editable
+  Styles output, clipboard feedback, and plain-text export.
+- `SoundBrainCanvas` takes controlled selections and reports collection records
+  and removal IDs. Three.js physics, drag/raycast, attraction, and BrainOrb
+  animation remain in mutable refs and `useFrame`. Keyboard collection shares
+  the collection handler. Mobile canvas height and pixel ratio are bounded.
+- Selection identity comes directly from catalog `id`, with exact catalog label
+  and category. Matrix labels address visual affinity lookup only; affinities
+  never enter compiler requests or become Suno prompt weights.
+- `/api/generate` accepts `{ nodes, relationship_notes }`, validates unique exact
+  catalog records, retains `gpt-5.6-luna` with its supported
+  `max_completion_tokens` parameter, and validates exact response coverage.
+  Invalid input returns 400, missing backend credentials 503, and provider/contract
+  failure 502. Provider error details and credentials are not returned or logged.
+- Selection and notes remain intact through loading, errors, and clarification.
+  Answer clarification in notes and compile again. Intent edits invalidate a
+  previous candidate; editing Styles does not mutate structured selections.
+- Catalog/matrix metadata and provenance remain in the canonical source files;
+  only the bounded discovery projection reaches the client. The full catalog is
+  available for server-side identity validation.
+
+Verification tooling:
+`npm.cmd run build`, `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd test`,
+and `npm.cmd run test:e2e` (after build). Browser tests use local Supabase fixtures
+through the existing login/middleware and controlled compiler responses. They do
+not configure real accounts or establish physical-device/Suno-audio acceptance.
+Local traces, screenshots, and failure receipts are excluded from commits.
