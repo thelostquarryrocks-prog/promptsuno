@@ -1,7 +1,10 @@
 # Atomic compiler usage quota
 
-Status: local SQL and full browser verification passed; **HOSTING BLOCKED**. No remote migration, push,
-PR, Vercel link, deployment or merge is authorized or performed by this task.
+Status: local SQL and full browser verification passed; **HOSTING BLOCKED**.
+The subsequent publication work package authorizes pushing a stacked draft PR
+and obtaining hosted CI, while remote migration/policy, paid model calls, Vercel,
+deployment, promotion and merge remain gated. Historical receipts below retain
+the authority and outcomes of their original work packages.
 
 Latest follow-up (2026-09-28): real disposable PostgreSQL 17.11 passed 17/17;
 one independent full browser run passed 21/21 with zero retries; unit tests
@@ -9,6 +12,44 @@ passed 95/95. Typecheck, build and security scans passed; lint has zero errors
 and two existing warnings. See the [final receipt](#final-full-suite-receipt--one-independent-run)
 and [staging assessment](#staging-application-assessment). Earlier failed and
 aborted receipts remain below; real Supabase/JWT and hosting gates remain open.
+
+## Hosted publication follow-up
+
+Remote inspection on 2026-09-28 verified PR #2 is an open draft at
+`3d44bfdb6ee4e6f44a65faf4c30cea26df58861a`, branch
+`codex/sound-brain-compiler-bridge`, based on main. PR #3 is an open draft at
+`443f9f474bbee60ccdcd6a1da3d0434d46efd0a1`, branch `codex/minimum-pr-ci`,
+also based on main. Neither PR is modified. PR #2's exact head is an ancestor
+of the quota branch and its merge base; use that branch as the stacked base.
+Its already-adopted CI workflow derives from PR #3; do not stack against PR #3
+and reintroduce PR #2's implementation as a misleading diff.
+
+CI now includes a separately reported `PostgreSQL 17 quota integration (17 checks)`
+job with a disposable service, loopback-only published port and empty
+`promptsuno_quota_test` database. It runs the unchanged opt-in harness and uploads
+its receipt separately from the existing unit/build/browser steps. No real Auth,
+deployment credential, remote database or paid model is used. Failure propagates
+through pipefail; no check is weakened or retried into a pass.
+
+The [staging approval packet](Compiler-Quota-Staging-Approval.md) records the
+unchanged migration hash, proposed private policy, target evidence gaps,
+read-only preflight, application/verification sequence and rollback. The exact
+staging target is not designated; this is a blocking approval-packet field,
+not permission to select a project. Hosted evidence will be linked in the draft
+PR after its final head completes. Earlier failed/aborted local receipts remain
+preserved under their original ignored verification directories.
+
+Publication-local checks (`.verification/quota-publish/`): unchanged real harness
+passed 17/17 on a fresh PostgreSQL 17.11 loopback cluster at port 55440; the
+cluster was stopped normally. `npm.cmd test` passed 95/95 across three files,
+0 failed/skipped; `npm.cmd run lint` had 0 errors and the two existing warnings.
+`node --check tests/db/compiler-quota.mjs`, workflow parsing with installed
+`js-yaml` plus isolation/failure-propagation assertions, and `git diff --check`
+passed. `node .verification/quota-real/security-scan.mjs` checked 75 files and
+14 client chunks with 0 exposed configured credentials or server markers.
+Runtime sources remain unchanged; the earlier 21/21 full browser, typecheck and
+8/8-page build receipts remain applicable local evidence, separately from the
+forthcoming hosted run. These CI/documentation edits add no app behavior.
 
 ## Authority and baseline
 
