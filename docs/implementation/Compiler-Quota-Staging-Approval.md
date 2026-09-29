@@ -1,6 +1,6 @@
 # Compiler quota staging migration approval packet
 
-Updated 2026-09-28 evening (2026-09-29 UTC). **STOP: preflight is partial;
+Updated 2026-09-29 02:20 UTC (2026-09-28 evening America/New_York). **STOP: preflight is partial;
 remote migration and policy approval are not yet requested.**
 This packet authorizes no mutating SQL execution, project creation, entitlement setting,
 paid model calls, Vercel linking/deployment, promotion or merge.
@@ -29,11 +29,14 @@ configuration. No API key was supplied and no RPC/model/mutation was invoked.
 The operator was asked to sign in through the UI without sharing credentials.
 
 **Fresh authenticated receipt:** existing Chrome operator authentication reached
-the exact target. Owner access and database role `postgres` were observed. Six
+the exact target. Owner access and database role `postgres` were observed. Seven
 explicit read-only SQL transactions and dashboard inspection established target
 identity, PostgreSQL 17.6, relevant owners/default ACLs/memberships/RLS,
 `auth.uid()` JSON-claim compatibility, API exposure and configured deadlines,
-Auth settings and the Supabase spend cap. See the
+Auth settings and the Supabase spend cap. The latest catalog batch refreshed
+operator identity, required privileges and absence of history/quota collisions
+through the user-selected Chrome SQL Editor. Authenticated OpenAI inspection
+also reached the newly designated funding project. See the
 [redacted receipt](Compiler-Quota-Staging-Preflight-2026-09-28.md) for facts,
 sources, exact limitations and the distinction between configuration and real
 JWT acceptance. No migration, RPC reservation or policy insertion ran remotely.
@@ -45,11 +48,22 @@ editing the migration. The API exposes `public` and `graphql_public`, and the
 authenticated statement timeout is configured as 8s; the route aborts at 5s.
 `auth.uid()` compatibility does not prove signature verification or revocation.
 
-Application decision remains withheld: verify the proposed runner's
-authenticated target identity and history behavior,
-and resolve the stated JWT preflight gaps. Provider funding-project designation
-and actual spend controls remain unavailable. Signup is open, CAPTCHA is off,
-and redirects are local-only. Traffic approval remains separate and blocked.
+The user selected Chrome's authenticated Supabase SQL Editor for **read-only
+migration-runner preflight**. That access path and its effective `postgres`
+identity are verified; CLI authentication is not required to complete these
+dashboard checks. This selection does not authorize migration execution or
+establish a dashboard migration-history registration procedure.
+
+Application decision remains withheld because real-JWT preflight is unavailable:
+the user explicitly has **no designated staging sign-in URL yet**. No application
+session was obtained, created or extracted. The separately proposed CLI
+application procedure below remains a proposal, with connection checks required
+if it is selected for execution. OpenAI funding project
+`proj_pBrkpocbPAtAPt6v7RAQy1EU` is now designated and inspected: project name
+`promptsuno`, organization display name `Personal`; no project spend limit,
+organization $100/month soft budget with hard enforcement off, alerts at
+80%/$80 and 100%/$100. Signup is open, CAPTCHA is off, and redirects are
+local-only. Traffic approval remains separate and blocked.
 
 Publication evidence: [stacked draft PR #4](https://github.com/thelostquarryrocks-prog/promptsuno/pull/4)
 contains the exact base/head and reviewed CI receipts. The initial
@@ -134,7 +148,9 @@ JWTs, cookies or keys into an evidence artifact.
 
 ## Proposed application and verification sequence (approval gated)
 
-1. Finish the missing authenticated runner and JWT preflight facts.
+1. Preserve the verified dashboard runner receipt and finish real-JWT preflight
+   after an approved staging sign-in surface is designated. Do not create an
+   account, deploy an application or extract a token to bypass that prerequisite.
    Freeze the reviewed migration hash and approved target; retain a redacted
    preflight receipt. Keep compiler traffic quiesced and paid provider calls
    disabled. Establish operator access and the rollback path first. Record an
@@ -167,7 +183,22 @@ JWTs, cookies or keys into an evidence artifact.
    technology, actual Suno/audio acceptance and deployment require their own
    later authority. This packet does not authorize them.
 
-### Proposed runner and history procedure
+### Verified preflight access and proposed application runner
+
+The read-only access path is Chrome > exact project > SQL Editor, effective
+`postgres`, using explicit `BEGIN READ ONLY` / `ROLLBACK`. Latest result:
+PostgreSQL 17.6, database `postgres`, required CREATE/REFERENCES/EXECUTE true,
+BYPASSRLS true and SUPERUSER false; history table absent, quota schema absent,
+zero RPC-name collisions. No migration-history initialization was attempted.
+The SQL Editor requirement is satisfied for preflight. Do not require a CLI
+sign-in merely to repeat these read-only dashboard facts.
+
+For a later application, the following remains the locally rehearsed proposal
+that registers history. It is **not** a claim of authenticated CLI target access.
+If dashboard execution is instead selected for application, first prepare and
+review its exact history-registration procedure separately; do not silently
+paste the migration and leave history absent. The current user instruction
+selects the SQL Editor for preflight only.
 
 Supabase CLI **2.118.0**, Windows amd64, official release archive SHA-256
 `e8eb5871b2a9e9b496d19f3fca4851d0c2a1bb8059613692d8906b5dc5fc2aad`.
@@ -217,8 +248,9 @@ that directory's linked ref is `mtzrvekmsmpflbsqgpcc` before each remote command
 
 Reference: [CLI migration/history behavior](https://supabase.com/docs/reference/cli/supabase-db-push),
 [dashboard bypass of migration history](https://supabase.com/docs/guides/deployment/database-migrations).
-These instructions are a proposal; authenticated CLI target access has not been
-established. The companion receipt records a successful local-only rehearsal:
+These application instructions are a proposal; authenticated CLI target access
+has not been established and is not needed for the completed dashboard checks.
+The companion receipt records a successful local-only rehearsal:
 dry-run left history/schema absent; application registered the sole version
 with 13 statements, preserved expected function ACLs and seeded no policy.
 The final disposable cluster shut down normally. Earlier launcher/fixture
@@ -244,11 +276,24 @@ Per-account quotas do not constrain account creation or total service spend.
 Approve provider/project budget alerts, monitored thresholds, a named operator,
 response times and a tested traffic/provider kill switch. Verify whether each
 provider setting is a hard enforcement control or merely an alert. Supabase Free
-spend cap is observed enabled; OpenAI funding project and controls are unobserved.
+spend cap is observed enabled. The designated OpenAI
+[project limits](https://platform.openai.com/settings/proj_pBrkpocbPAtAPt6v7RAQy1EU/limits)
+show no spend limit and therefore no project spend alerts. Its associated
+[organization limits](https://platform.openai.com/settings/organization/limits)
+show a $100 monthly budget, **Enforce a hard limit = false**, and alerts at
+80% ($80) and 100% ($100). These are notifications, not an enforced $100 ceiling.
+All current and future models are allowed. The repository's `gpt-5.6-luna`
+model shows project limits of 500,000 TPM / 500 RPM, equal to the displayed
+organization maxima; the organization also lists a 5,000,000 TPD batch queue
+limit. Rate/queue limits are not aggregate financial caps. No setting was saved.
 [Official OpenAI documentation](https://developers.openai.com/api/docs/guides/spend-limits)
 describes optional hard limits separately from
 alerts; verify the actual enforcement switch and allow for propagation overshoot.
-No configured OpenAI hard dollar cap is claimed. Keep the compiler disabled
+No configured OpenAI hard dollar cap is established by this inspection. Resolve
+an approved enforced aggregate limit, alert thresholds and response ownership;
+verify server-side funding-project binding during later environment acceptance
+without revealing the key. Designation alone does not prove an application key
+belongs to the project. Keep the compiler disabled
 until aggregate cost exposure is acceptable. Existing caps are maxRetries=0,
 30s provider timeout and 2048 output tokens; input bytes do not measure token cost.
 
@@ -270,11 +315,14 @@ dependency/data assessment and approval. Remote rollback has not been executed.
 
 ## Exact outstanding decision
 
-**Do not request migration approval yet.** Authenticated dashboard access is
-available, but runner connection verification and the real-JWT preflight
-limitations are unresolved. The provider project is
-also not identified for spend inspection. This packet is reviewable preparation,
-not a claim that all preflight gates passed.
+**Do not request migration approval yet.** Authenticated dashboard SQL runner
+preflight and designated provider-configuration inspection are complete to the
+scope recorded above. Overall preflight remains partial: no designated staging
+sign-in URL exists, so real signed-JWT propagation/rejection and application
+refresh/revocation acceptance are unverified. The next required input is that
+sign-in surface, followed by user-controlled sign-in if needed; never credentials
+in chat. The proposed eventual application runner also requires its own
+connection receipt before use. This packet does not claim all gates passed.
 
 After those application-preflight gaps close, present two explicit choices:
 

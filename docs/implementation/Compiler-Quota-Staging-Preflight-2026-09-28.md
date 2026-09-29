@@ -7,13 +7,16 @@ redacted configuration receipt, not migration execution or traffic acceptance.
 ## Scope and provenance
 
 - Only Supabase project `mtzrvekmsmpflbsqgpcc` and its owning organization's
-  subscription controls were inspected. No other Supabase project was used.
+  subscription controls were inspected on Supabase. No other Supabase project
+  was used. Follow-up at 2026-09-29 02:20 UTC also inspected the explicitly
+  designated OpenAI project `proj_pBrkpocbPAtAPt6v7RAQy1EU` and its associated
+  organization's limits through existing Chrome authentication.
 - Existing Chrome operator authentication was available. No new sign-in,
   credential extraction, API-key reveal, account creation or paid call was needed.
 - The signed-in operator has project **Owner** access; SQL queries ran with
   `session_user = current_user = postgres`. Personal account identifiers are
   omitted. This identifies the access role, not a transferable credential.
-- Six catalog/configuration/claim-extraction SQL batches ran in explicit
+- Seven catalog/configuration/claim-extraction SQL batches ran in explicit
   `BEGIN READ ONLY` / `ROLLBACK` transactions. No application/user rows were
   selected. One batch used synthetic, transaction-local JWT claim settings and
   `SET LOCAL ROLE authenticated`; it changed no persistent Auth configuration.
@@ -58,6 +61,20 @@ strong and is superseded here. The exact user-designated target remains fixed;
 no project, branch, consumer or setting was changed.
 
 ## Migration history, ownership and access
+
+Q7 follow-up (2026-09-29 02:20 UTC) used the user-selected authenticated Chrome
+SQL Editor in the exact project. It independently refreshed the operator and
+collision facts in `BEGIN READ ONLY` / `ROLLBACK`. The one-row catalog result
+contained only configuration: database/current_user/session_user all `postgres`,
+server version 17.6, read_only `on`, statement_timeout `2min`, SUPERUSER false,
+BYPASSRLS true; CREATE on public, REFERENCES on auth.users and EXECUTE on auth.uid
+all true; auth.uid without claims NULL. History table remained NULL, quota
+schema absent and RPC-name collision count zero. The initial Run click timed
+out before results appeared; the visible editor still had no result. The
+editor's Ctrl+Enter command produced the successful read-only result, reviewed
+again at the end. No mutating SQL, application rows or secret values were used.
+This is authenticated **dashboard runner preflight**, not a remote CLI receipt
+or migration application. No CLI sign-in is needed for these dashboard checks.
 
 Q1: `to_regclass('supabase_migrations.schema_migrations')` returned NULL;
 `compiler_quota_private` did not exist; its object list was empty; no function
@@ -153,7 +170,11 @@ Third-party Auth providers: none listed. Auth hooks: none configured. Actual
 accepted issuer/audience, forged/expired-token rejection, live `sub` propagation,
 and revocation behavior have **not** been verified through real PostgREST/Auth
 requests. No approved application-user session is available in this workspace;
-the dashboard operator session is not an application JWT.
+the dashboard operator session is not an application JWT. In the follow-up,
+the user explicitly confirmed that a PromptSuno sign-in URL connected to
+staging is **not designated yet**. That missing application surface is the
+precise remaining real-session acceptance blocker. Do not create accounts,
+deploy a surface, mint a substitute token or collect credentials to bypass it.
 
 ## Auth configuration
 
@@ -202,10 +223,29 @@ See [session semantics](https://supabase.com/docs/guides/auth/sessions).
   describes exclusions for explicitly opted-in predictable costs. No upgrade,
   add-on purchase or cap change was made. No configured custom alert threshold
   was observed; none is claimed.
-- OpenAI funding organization/project has not been designated or linked by
-  available workspace configuration. Do not infer it from Supabase ownership.
-  Actual OpenAI budgets, enforcement switches, alerts, model allowlists and rate
-  limits remain **unobserved**. No provider dashboard/account was selected.
+- The user subsequently designated OpenAI funding project
+  **`proj_pBrkpocbPAtAPt6v7RAQy1EU`**. Authenticated Chrome inspection of its
+  [project Limits page](https://platform.openai.com/settings/proj_pBrkpocbPAtAPt6v7RAQy1EU/limits)
+  showed project name **promptsuno**, organization display name **Personal**,
+  and **No spend limit set** / set a limit to enable alerts. Thus no project
+  budget or project spend alerts were configured on this page. This supersedes
+  the earlier provider-designation/access gap; no key was inspected or revealed.
+- The associated [organization Limits page](https://platform.openai.com/settings/organization/limits)
+  showed Usage tier 1, a **$100 monthly spend limit** and alerts at **80% ($80)**
+  and **100% ($100)**. Opening its edit dialog for inspection confirmed the
+  existing amount 100 and **Enforce a hard limit: aria-checked=false**. Cancel
+  closed the unchanged dialog. This is a **soft budget with notifications**,
+  not an enforced $100 cap. The hard-enforcement control is available but off.
+  No billing/payment details or actual expenditure are retained in this receipt.
+- Project model access is **Allow all models** (selected): all current and
+  future models allowed, subject to organization/system restrictions. The
+  inspection dialog was cancelled without saving. The project rate-limit
+  panel states limits inherit from the organization unless overridden. For
+  the exact model in `src/app/api/generate/route.ts`, **gpt-5.6-luna**, the
+  displayed project values equal the organization maxima: **500,000 TPM** and
+  **500 RPM**. Organization batch queue limit: **5,000,000 TPD**. These are
+  throughput/queue controls, not an aggregate dollar cap. No distinct lower
+  project rate was observed for this model; no settings were changed.
 - Current [official OpenAI spend-limit documentation](https://developers.openai.com/api/docs/guides/spend-limits)
   distinguishes alerts (requests continue) from optional organization/project
   hard enforcement (429 after tracked threshold, with possible propagation
@@ -214,12 +254,16 @@ See [session semantics](https://supabase.com/docs/guides/auth/sessions).
 
 Before traffic: resolve closed/invitation-only signup or equivalent approved
 abuse controls, confirmation, CAPTCHA and endpoint limits; approve exact HTTPS
-site/redirect origins; assess multi-account/account-deletion abuse; inspect the
-designated OpenAI project; approve aggregate enforced exposure plus alerts,
+site/redirect origins; assess multi-account/account-deletion abuse. The
+designated OpenAI project's controls are now inspected; approve aggregate
+enforced exposure plus alerts,
 operator response ownership and a tested kill switch. Retain quotas as per-user
 fixed windows, not a financial guarantee. Resolve existing session and JWT
 acceptance gaps. These are separate from permission to install an empty-policy
-schema while traffic is quiesced.
+schema while traffic is quiesced. Also verify later that the server-side
+deployment credential is bound to the designated funding project without
+exposing it. The user's funding designation and dashboard selection do not
+prove the application environment's key binding.
 
 ## Comparison and outstanding decisions
 
@@ -278,22 +322,42 @@ difference requires changing the pinned migration. PostgreSQL 17.6 differs from
 the CI fixture's 17.11; real-target migration behavior remains unexecuted.
 No migration bytes were changed or substituted under the original hash.
 
-Required **procedure correction**: use the locally rehearsed, pinned Supabase CLI runner
-that registers migration history; do not paste the migration into the dashboard
-and silently leave history absent. The repository currently has no config/link
-metadata, CLI on PATH, local `.env*`, or Supabase/database credential environment
-variable names. A portable CLI now exists only under ignored verification files.
-A browser session does not authenticate a CLI. Actual runner authentication,
-operator identity in its target connection and target pending-file list still
-must be verified before the application decision is requested.
+The user selected Chrome's SQL Editor for read-only migration-runner preflight;
+Q7 verifies that path and the effective operator. This supersedes any inference
+that a CLI login was required just to complete dashboard preflight. Browser
+authentication does not establish CLI access, but no CLI credentials are
+requested for this read-only work.
 
-Application approval is withheld pending a fully reviewed authenticated runner
-receipt and real-JWT preflight evidence. Provider configuration gaps remain
-explicit. The exact migration and the private policy `(true,3,60,20,86400)` are
+The locally rehearsed pinned CLI remains a **proposed later application runner**
+because it registers migration history. Require `--skip-vault` if that proposal
+is selected, and verify the identity/role/pending list of that future connection
+before application approval. If dashboard execution is chosen instead, first
+prepare and review its exact history-registration procedure; do not silently
+paste the migration and leave history absent. The current user instruction
+authorizes SQL Editor queries only. No remote runner initialization, history
+repair or DDL was attempted. Portable CLI and local rehearsal receipts remain
+ignored local artifacts; no linked project metadata or secrets were added.
+
+Application approval remains withheld pending real-JWT preflight evidence from
+a designated staging sign-in surface and the eventual application runner's
+connection receipt. Dashboard runner preflight and provider configuration
+inspection succeeded; they do not establish real application-session behavior
+or enforced aggregate spend protection. The exact migration and the private
+policy `(true,3,60,20,86400)` are
 separate decisions; neither is approved or executed by this receipt. See the
 [approval packet](Compiler-Quota-Staging-Approval.md) for sequence and gates.
 
 ## Documentation delivery and CI boundary
+
+Follow-up provenance: started from local documentation head
+`a6afc09822cdaf7ab982a8d04b03e8dfa1ea219f`. Fresh GitHub inspection again confirmed
+PR #4 OPEN/DRAFT/unmerged at the original required head
+`90848ad6249262144c3894eddc5a694db43304cd`, with unchanged base/head branches.
+The migration hash was freshly rechecked and matched. This continuation changes
+only the same three documentation files; it does not publish them. The final
+local commit SHA is reported in the handoff. Runtime suites were not rerun for
+these documentation changes; the required new-head CI jobs below remain pending
+separately authorized publication.
 
 This follow-up changes only this receipt, the staging approval packet and a
 supersession note in Atomic-Compiler-Quota.md. Runtime code, tests, workflow and

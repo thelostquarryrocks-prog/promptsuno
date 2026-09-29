@@ -21,7 +21,12 @@ see the [redacted preflight receipt](Compiler-Quota-Staging-Preflight-2026-09-28
 and updated [approval packet](Compiler-Quota-Staging-Approval.md). No remote
 migration/policy ran. The dashboard's main/PRODUCTION label is documented default
 behavior without GitHub integration and does not override the user's staging
-designation. Runner access, real-JWT and provider-control gaps remain explicit.
+designation. Follow-up at 2026-09-29 02:20 UTC verified the user-selected Chrome
+SQL Editor preflight path and inspected designated OpenAI project
+`proj_pBrkpocbPAtAPt6v7RAQy1EU`: no project spend limit; organization $100/month
+soft budget, hard enforcement off, alerts at $80/$100. No staging sign-in URL is
+designated, so real-JWT acceptance remains unavailable. The CLI is only a
+proposed later application runner; it is not required for dashboard preflight.
 No application or traffic approval is requested yet.
 
 Remote inspection on 2026-09-28 verified PR #2 is an open draft at
