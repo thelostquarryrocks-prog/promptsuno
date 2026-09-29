@@ -1,5 +1,85 @@
 # Compiler quota staging migration approval packet
 
+## Protected deployment receipt and remaining human gates - 2026-09-29
+
+**Partial acceptance: protected deployment ready; real staging sign-in remains
+pending user-controlled existing-account sign-in.** No session, token, account
+record or password was acquired for this receipt.
+
+| Item | Fresh observed evidence |
+| --- | --- |
+| Vercel project | `promptsuno-signin-staging`, `prj_3MzWlBvUpiOPkBtBMbkL2rKh6ZcU` |
+| Team / plan | `prompt-suno`, `team_ID2vravvKgQ3XBHYVmHPHoPz`, active Hobby; no upgrade or paid add-on |
+| Protected sign-in URL | https://promptsuno-signin-staging.vercel.app/login |
+| Final deployment | `dpl_4xfWpEcmY7D5ML3s5e2r7km9SGs7`, production, READY, aliases assigned |
+| Generated URL | https://promptsuno-signin-staging-7r8l1kzr2-prompt-suno.vercel.app |
+| Deployed commit | `41bf9fc7cc30ff8fc35cd83e5f1994d408957e22`, `codex/atomic-compiler-quota` |
+| Exact-head CI | [36520702019](https://github.com/thelostquarryrocks-prog/promptsuno/actions/runs/36520702019), both required jobs completed/success |
+| CI totals | PostgreSQL 17: 17 checks; units: 95 tests / 3 files; browsers: 21 tests; zero failed/skipped; types successful; build 8/8 pages, zero build warnings/errors; lint zero errors/two existing warnings |
+| Protection before first deployment | API readback `ssoProtection.deploymentType=all` with zero deployments; dashboard saved All Deployments / Require Log In |
+| Anonymous HTTP checks after READY | Generated URL and both production aliases: GET `/login` returns 302 to `https://vercel.com/sso-api`; POST `/api/generate` returns Vercel 401 before application access |
+| Authorized viewer | Existing authenticated Vercel Chrome viewer opened `/login`; enabled Email address, Password and Sign In controls visible |
+| Environment | Production-scoped public Supabase URL and anon key only; endpoint/ref and decoded anon role verified without printing values; no OPENAI_API_KEY or privileged Supabase key |
+| Domains | Only `*.vercel.app`; no PromptSuno.com or public custom domain |
+| Noindex | Wildcard `X-Robots-Tag: noindex, nofollow, noarchive` config shipped; generated URL and team-qualified alias challenges return noindex. Stable alias authentication challenge has no robots header; authorized application-response header remains unverified |
+| Login presentation | Captured 390x844 mobile and 1366x900 desktop; form present at both sizes. Real sign-in, error/refresh/revocation, keyboard and cookie/origin acceptance remain incomplete |
+
+Both hosted receipts were downloaded and reviewed. Fixture Auth/provider errors
+in tests are expected rejection scenarios, not real staging acceptance. CI
+runtime/action deprecation and browser environment notices remain preserved.
+PR #4 is still draft/unmerged; PR #2/#3 heads remain respectively
+`3d44bfdb6ee4e6f44a65faf4c30cea26df58861a` and
+`443f9f474bbee60ccdcd6a1da3d0434d46efd0a1`; unrelated untracked files preserved.
+
+Deployment provenance correction: first protected deployment
+`dpl_7ca4cK6zq8qMwucDmbaxyi7jqj2Y` exported the same commit with Windows CRLF
+conversion. A raw-byte comparison failed; this is not exact-byte acceptance.
+The corrected archive used `git -c core.autocrlf=false archive`; all 63 CLI
+upload-manifest files then matched exact Git blob bytes. No local environment,
+unrelated source copy or verification artifact was included. The final protected
+deployment above uses that verified archive. CLI metadata says `gitDirty=1`
+because the archive is inside the outer repository's ignored verification folder;
+this marker was retained, not rewritten. The reviewed upload manifest and byte
+receipt establish the shipped source independently of that marker. Earlier
+deployment/export receipts are retained separately.
+
+### Supabase Auth redirect decision - no setting changed
+
+Fresh read-only dashboard inspection of `mtzrvekmsmpflbsqgpcc` shows Site URL
+`http://localhost:3000` and **No Redirect URLs**. The deployed login code sets
+email redirect to `${location.origin}/auth/callback`. For the designated stable
+protected sign-in origin, the exact required allowlist entry is:
+
+**`https://promptsuno-signin-staging.vercel.app/auth/callback`**
+
+Reason: email-link callbacks must reach the deployed code-exchange route rather
+than fall back to localhost. Proposed Site URL, if approved for staging email
+fallbacks/templates: **`https://promptsuno-signin-staging.vercel.app`**.
+No wildcard or other origin is proposed. Generated-host sign-in would need that
+host's separate exact callback entry; use the stable designated origin instead.
+Stop before saving either remote setting; approval is required by the current
+user instruction. Existing-account `signInWithPassword` uses a direct Auth
+request followed by client navigation to `/workspace`, so its acceptance does
+not depend on an email redirect change. No account was created and signup
+settings were not changed. User-controlled sign-in was handed off in the secure
+Chrome UI; real server-side `auth.getUser()` recognition, signed-out application
+401 behind the Vercel boundary, cookie/origin checks and mobile/desktop signed-in
+flow are still unverified. Do not equate the Vercel 401 challenge with the
+application's signed-out 401.
+
+Quota RPC still requires separately approved remote migration and policy; neither
+was applied. No remote reservation or paid model invocation occurred. OpenAI
+spend settings, signup settings, merge and ready-for-review state are unchanged.
+Do not enable paid traffic from this protected sign-in deployment receipt.
+
+Redacted local receipts under `.verification/private-staging/`: final
+`deployment-status.json`, `protection-receipt-lf.log`, `artifact-verification.json`,
+`project-predeploy.json`, `ci-41bf9fc.json`, `ci-41bf9fc.log`, upload manifest
+`deploy-inputs-lf.json`; account-free login screenshots `login-mobile.png` and
+`login-desktop.png`, and protection screenshot `protection-all.png`. These ignored
+artifacts are not committed. This documentation update does not change or
+redeploy the frozen application commit; its own PR head needs fresh CI.
+
 ## Protected sign-in staging authorization and preparation - 2026-09-29
 
 The user's 2026-09-29 deployment instruction supersedes this packet's earlier
