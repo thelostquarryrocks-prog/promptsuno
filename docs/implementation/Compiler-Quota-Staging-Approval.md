@@ -36,8 +36,8 @@ The application remains frozen at
 | Signed-out navigation | A fresh stable-origin `/workspace` navigation reached `/login` |
 | Host isolation | While the stable origin was signed in, fresh generated-origin `/workspace` redirected to its own `/login`; no stable-origin application session was transferred |
 | Mobile | 390x844 workspace loading, disabled compiler feedback and retained signed-out intent observed with no horizontal overflow. Login keyboard sequence Email -> Password -> Sign In checked; the credential-entry tab was independently measured at 390x844 |
-| Full mobile credential submission | User handoff requested in the secure 390x844 tab. Submission, validation feedback, redirect/loading and post-login focus at that size remain pending; no credential values or account fields were read |
-| Desktop | Fresh signed-out login measured 1366x900 with no horizontal overflow. Earlier signed-in desktop receipt remains historical; no new desktop sign-in claimed |
+| Mobile credential retry | User reported submission in the secure tab previously measured at 390x844; post-submit inspection confirmed `/workspace`, Sign Out present, Sound Brain loading complete, no horizontal overflow and focus on BODY. Reload at 390x844 retained server recognition. Transient validation/submitting/loading states and virtual-keyboard behavior during private entry were not captured; no credential values or account fields were read |
+| Desktop | After the mobile retry, the signed-in workspace was inspected at 1366x900 with Sign Out present and no horizontal overflow. This verifies the resulting desktop workspace, not a separate desktop credential submission. Earlier signed-out login layout remains verified |
 | Console | Review-tab warning/error capture contained only the known THREE.Clock deprecation warning; no additional warning/error category was captured |
 | No quota/provider call | Environment inspection confirms key absent; the frozen route checks verified Auth, then request validity, then missing provider key, before quota RPC or OpenAI construction. Runtime statuses plus that code ordering establish these exercised rejection paths; this is not remote quota acceptance |
 
@@ -45,6 +45,40 @@ Redacted runtime receipt records the signed-in POST 503 at epoch milliseconds
 `1790678670612` and signed-out POST 401 at `1790678859107`. Reload/navigation
 alone does **not** prove expiry-driven token rotation. No refresh token or old
 access token was copied for replay, and no session was administratively revoked.
+
+### Secure mobile retry follow-up
+
+After the user reported submission, the existing restricted tester reached the
+stable-origin workspace at 390x844. A fresh reload stayed on `/workspace`; the
+redacted runtime receipt records workspace GET 304 responses at epoch
+milliseconds `1790696891040` and `1790697097313`. This confirms continued server
+recognition, not token rotation or a newly observed HTTP 200. The resulting
+workspace was also inspected at 1366x900. Both sizes had no horizontal document
+overflow. Post-submit focus was BODY; the transient validation, submitting and
+loading sequence during private credential entry was not observed. The earlier
+Email -> Password -> Sign In keyboard-order check does not establish virtual
+keyboard behavior during this retry. The signed-in tab remains open for the user.
+
+A fresh read-only configuration check at `2026-09-29T15:56:07.817Z` reconfirmed
+All Deployments protection, the READY frozen SHA, no OpenAI key, only the two
+public Supabase variables, no Git integration, Vercel-only domains, disabled
+public signup and no automation bypass. An initial restricted-network check
+failed without a detailed receipt; the approved network-enabled retry succeeded.
+No settings changed during this retry. No additional compiler POST was needed.
+
+The shared checkout had independently moved to `main`. Documentation follow-up
+therefore uses a managed isolated checkout of `codex/atomic-compiler-quota` at
+`6ff5cf783ba54c890c54e3f464a48048a01810e9`; the shared checkout and unrelated work
+are preserved. Only this approval packet changes. Prior exact-head hosted run
+36558621322 attempt 1 retained its mobile-WebKit drag failure (20 passed, 1 failed,
+0 skipped); attempt 2 passed both jobs with 21/21 browser tests. New final-head
+hosted results belong in the PR description and handoff, not in this historical
+receipt. The quota/spend approval block below remains unchanged and conditional.
+
+Retry artifacts are local and uncommitted under `.verification/private-staging/`:
+`mobile-retry-workspace.png`, `desktop-retry-workspace.png`, the latest boolean
+configuration/runtime receipts, and the preserved `config-initial-redacted.json`
+and `runtime-initial-redacted.json`. They contain no credential or account fields.
 
 ### Exact live blockers, without fixture substitution
 
