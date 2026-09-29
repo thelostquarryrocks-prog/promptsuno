@@ -1,5 +1,134 @@
 # Compiler quota staging migration approval packet
 
+## Current authentication gate decision - conditional design approval
+
+**AUTHENTICATION PREREQUISITES ARE CLOSED: NO.**
+**SAFE TO PROCEED TO STAGING MIGRATION + QUOTA ACTIVATION: NO.**
+
+The user's continuation instruction approves the package **design only**:
+`supabase/migrations/202609280001_compiler_quota.sql`, SHA-256
+`bf5b5ca0a2a6b4519a53e786975e489a809d995d84601d78b95e9d502a3bbd19`,
+policy `(true, 3, 60, 20, 86400)`, and the designated OpenAI PromptSuno project
+proposal of a $10 hard monthly limit, $5/$8 alerts and Luna-only model access
+where supported. This supersedes earlier wording that no design decision had
+been received. It grants no execution permission: migration, policy activation,
+provider provisioning, spend-setting changes and paid/public traffic remain
+unperformed. A separate explicit next-gate approval is required before migration
+or activation, even after authentication prerequisites close. PR #4 remains draft.
+
+This receipt supersedes earlier current-looking acceptance status only where
+explicitly stated. Historical observations and failures below are preserved.
+The clean isolated checkout started on `codex/atomic-compiler-quota` at
+`ad783c29bf18ab08ed018056c569cefe9650ba83`, matching the live draft PR. Its two
+required jobs remained successful in run 36594264073: PostgreSQL 17/17;
+unit/API/component 95/95 in 3 files; browser 21/21; typecheck/build successful;
+lint 0 errors and 2 existing warnings. These are hosted fixture checks, not live
+staging acceptance. The deployed application remains frozen at
+`41bf9fc7cc30ff8fc35cd83e5f1994d408957e22`. Comparing that SHA with the starting
+head shows only this documentation file changed. No runtime fix was justified
+or made; no assertion, test, origin/session guard or quota behavior changed.
+
+### Authentication acceptance matrix
+
+PASS entries explicitly identify fresh versus previously accepted live evidence.
+A failed inspection tool is recorded as BLOCKED, not an application failure or
+PASS. No new application defect was demonstrated in this continuation.
+
+| Acceptance item | Status | Evidence or exact blocker |
+| --- | --- | --- |
+| Authorized application robots/cache headers | BLOCKED | Chrome exposes no network-response API. CLI login probes again returned 302, with no robots header on stable and only `noindex` on generated. These do not establish authorized application `noindex, nofollow, noarchive` or `private, no-store` |
+| Authenticated hostile-Origin application 403 | BLOCKED | Synthetic hostile-Origin CLI POST returned 401, without the application's expected auth-rejection JSON. No valid application session can be attached through the supported request API without exporting credentials; this does not test the authenticated 403 path |
+| Missing application session 401 | BLOCKED | Fresh CLI synthetic/missing-session POST returned 401, but not the expected application JSON. No application-level PASS inferred from protected-deployment status alone |
+| Malformed application session 401 | BLOCKED | Same CLI boundary as missing session; malformed input was synthetic, with no private credential read |
+| Forged application session 401 | BLOCKED | Same CLI boundary; only a synthetic invalid signature/session shape was used, with no real JWT or refresh token exported |
+| Signed-out application API 401 | PASS, retained live evidence | Previously accepted real-browser POST `/api/generate` at epoch milliseconds `1790678859107`; user accepted this observation in the continuation. Not rerun in this receipt |
+| Signed-in same-origin missing-provider 503 | PASS, retained live evidence | Previously accepted browser POST `/api/generate` at `1790678670612`, combined with absent provider key and frozen route ordering; no quota/provider work. Not rerun in this receipt |
+| Session persistence/server recognition | PASS, fresh live evidence | After browser recovery, stable-origin reload stayed on `/workspace` with Sign Out present and no overflow; runtime GET 304 at `1790700378332`. This does not prove token rotation |
+| Actual cookie metadata and sign-out deletion | BLOCKED | Advertised Chrome capabilities remain viewport/pageAssets plus DOM/screenshot/console APIs; no cookie metadata, cookie mutation or response-header inspection. No cookie values or profiles read. Installed SSR expectations below remain source-only |
+| Expiry refresh/rotation | BLOCKED | Continued navigation is not proof of token rotation; no supported session lifecycle observation API and no token export/replay |
+| Revoked-session rejection | BLOCKED | No safe in-place revoke-and-observe/replay capability for the existing tester. No administrative revocation or new account/session credentials created |
+| Mobile validation/keyboard order | PASS, fresh live evidence | At 390x844, generated-origin empty form kept `/login`, both required fields were missing and focus moved to email. Synthetic malformed email produced typeMismatch with no redirect. Remeasured Email -> Password -> Sign In sequence passed with no overflow. No password entered or Auth submission made |
+| Mobile successful submitting/loading transition and virtual keyboard | BLOCKED | Prior user-reported submission reached the workspace, but transient states were not captured. Desktop viewport emulation does not establish physical virtual-keyboard behavior. No additional real credential submission was performed |
+| Mobile resulting focus/layout and desktop layout | PASS, retained live evidence | 390x844 result had BODY focus, loading complete and no horizontal overflow; 1366x900 workspace had no horizontal overflow. No new screenshot or fresh layout PASS claimed |
+| Stable/generated host isolation | PASS, fresh live evidence | Stable-origin reload stayed signed in; a new generated-origin `/workspace` navigation reached its own `/login` with Sign In present and Sign Out absent. Runtime records generated workspace GET 307 at `1790700390291`, then login GET 200 at `1790700390410`. Stable workspace remained signed in after closing the generated test tab |
+| Disabled public signup | PASS, fresh settings read | Redacted designated-project Auth settings read at `2026-09-29T16:48:49.809Z`: signup disabled, email enabled, global auto-confirm disabled |
+| Protected/frozen staging and provider absence | PASS, fresh settings read | Same receipt confirms target identity, All Deployments protection, READY frozen SHA, only two public Supabase variables, no OpenAI key, no Git integration and Vercel-only domains |
+| No automation bypass | PASS, fresh settings/probe read | Project inspection and the CLI helper find no existing automation bypass; no bypass was created or supplied. No shareable-access-link tool invoked |
+| Credential-form evidence handling | FAIL | Unexpected autofill exposed an account field in an emitted screenshot. Both new local capture files were removed; the tool preview cannot be retracted here. No identifier appears in this packet. No further form screenshot taken; prior evidence preserved |
+
+### Bounded attempts and preserved evidence
+
+The Vercel connector exposes a URL-only authenticated fetch operation; it has no
+custom method/header/session arguments for these POST cases. A read-only fetch
+of the designated `/login` returned a connector `INVALID_ARGUMENT` error before
+an application response. Only the error class/booleans were retained; no raw
+connector output or authenticated URL was published. Its separate share-link
+operation explicitly creates temporary access and was not used.
+[Vercel's tool reference](https://vercel.com/docs/agent-resources/vercel-mcp/tools)
+documents these distinct operations. This attempt neither establishes application
+headers nor supplies a supported authenticated POST/session inspection facility.
+
+Chrome's supported inventory located a stable-origin `/workspace` tab, but the
+claim/DOM inspection timed out before command dispatch. After reading the
+browser troubleshooting guidance, an existing-tab handle retry had the same
+failure. The documented accessibility fallback also timed out while enabling
+focus emulation. Inventory alone is not fresh server recognition. The user was
+asked to foreground the existing tab and confirm the browser connection; no
+credential entry was requested. After the user confirmed readiness, the documented
+DOM API recovered. Fresh reload/host-isolation and credential-free native-form
+checks above then succeeded. No browser-profile access, DevTools workaround or
+alternative automation channel was used. Cookie/network/session capabilities
+remain unavailable despite the recovered DOM interaction.
+
+The protected CLI probes used explicit deployments, an unlinked temporary cwd,
+no tracing, and synthetic invalid inputs. Stable/generated login returned 302;
+hostile-Origin, missing, malformed and forged POSTs returned 401 without the
+expected application auth-rejection JSON. The numeric status is therefore
+insufficient for an application acceptance claim. No fixture result substitutes
+for any blocked live case. Source inspection of the exact deployed SHA confirms
+`auth.getUser()` precedes Origin/body checks, missing provider key precedes quota
+RPC, and quota precedes OpenAI construction. An unauthenticated hostile request
+cannot prove the authenticated 403 branch; weakening this ordering is not a fix.
+
+Local uncommitted redacted receipts are preserved under the shared checkout's
+`.verification/private-staging/`: `auth-gate-config-start-redacted.json`,
+`auth-gate-config-final-redacted.json`, `auth-gate-protected-http-redacted.json`,
+`auth-gate-runtime-redacted.json`, `auth-gate-mobile-redacted.json`, and the new
+`auth-gate-probes-safe.mjs` / `auth-gate-runtime-safe.mjs` helpers.
+Existing evidence and unrelated homepage/Learn work remain untouched. The shared
+checkout remains on its independently selected `main`; all tracked edits for
+this task occur in the managed `staging-auth-receipt` quota checkout.
+
+A first mobile keyboard/capture attempt had a transient viewport disturbance and
+an overflow reading, so it was not accepted. A fresh 390x844 remeasurement of
+both keyboard transitions reported no horizontal overflow. An initial locator
+used Email instead of the observed Email address label; it matched nothing and
+was corrected from DOM label metadata. No test assertion was changed. Browser
+autofill unexpectedly exposed an account field in the subsequent screenshot.
+Both new local capture files were removed immediately. The preview had already
+been emitted to the tool transcript; deleting local files does not retract that
+preview. No identifier is repeated in this packet or committed evidence. Redacted
+metadata and this failure explanation preserve the incident. Earlier verification
+evidence was not removed. No further credential-form screenshots were taken.
+The generated review tab was closed, the viewport override reset, and the user
+stable-origin workspace remained signed in. These checks did not observe a real
+login submission/loading transition or a physical virtual keyboard.
+
+### Decision and next gate
+
+The missing application header/cache, authenticated hostile-Origin, invalid-session
+and cookie/lifecycle evidence concerns the security boundary itself. It cannot
+be classified as a demonstrated non-critical limitation merely because source
+and fixture tests pass. The authentication stop gate is therefore **not closed**.
+
+Resume with a supported facility that inspects
+headers/cookie metadata and exercises requests within the existing authorized
+session while returning only allowlisted metadata/booleans, without credential
+export, a new bypass or protection changes. Physical virtual-keyboard behavior
+needs an observable device session. Until the security hold points close, keep
+migration/policy/provider access and paid traffic disabled. No new execution
+approval is requested on the strength of this partial evidence.
+
 ## Current decision receipt - 2026-09-29 protected acceptance follow-up
 
 **PARTIAL: redirect correction verified; live authentication acceptance remains
