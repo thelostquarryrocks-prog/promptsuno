@@ -1,5 +1,48 @@
 # Compiler quota staging migration approval packet
 
+## Protected sign-in staging authorization and preparation - 2026-09-29
+
+The user's 2026-09-29 deployment instruction supersedes this packet's earlier
+no-Vercel authorization boundary only for a separate protected sign-in test
+project. Remote quota migration/policy, Auth setting changes, signup changes,
+paid compiler calls, spend changes, PR promotion and merge remain prohibited.
+
+Verified branch `codex/atomic-compiler-quota`, local head
+`c88770594c42a789f0a95b44d9fab58c8c66e24d`, descends from draft PR #4's prior
+head `90848ad6249262144c3894eddc5a694db43304cd`. The existing documentation
+commits were pushed without changing PR #2/#3. Both required hosted jobs passed
+at c887705 in [run 36520259446](https://github.com/thelostquarryrocks-prog/promptsuno/actions/runs/36520259446):
+PostgreSQL 17 integration 17/17, unit/API/component 95/95, browser 21/21,
+zero failed/skipped tests; build 8/8 pages, zero build warnings/errors;
+types successful, lint zero errors/two existing warnings. Action/runtime
+deprecation and browser environment notices remain in the local receipt.
+These are isolated fixtures, not real staging session or RPC acceptance.
+
+Verified Vercel account `thelostquarryrocks-8642`, team **PromptSuno** / `prompt-suno`
+(`team_ID2vravvKgQ3XBHYVmHPHoPz`), active Hobby plan. The connected Vercel
+connector returned a different team and was not used for mutations.
+Created separate project **promptsuno-signin-staging**,
+`prj_3MzWlBvUpiOPkBtBMbkL2rKh6ZcU`, without a Git integration or deployment.
+Before any deployment, API readback verified `ssoProtection.deploymentType=all`,
+zero deployments and zero protection exceptions. No custom domain attached.
+All Deployments Vercel Authentication is free on every plan per the
+[2026-09-09 announcement](https://vercel.com/changelog/protect-production-deployments-for-free-on-every-plan);
+no plan upgrade/add-on or recurring charge was accepted.
+
+`vercel.json` adds `X-Robots-Tag: noindex, nofollow, noarchive` on all paths for
+this staging deployment. Production does not receive Vercel's automatic preview
+noindex guarantee. The deployment must use only designated Supabase target
+`mtzrvekmsmpflbsqgpcc`, its public URL/anon key, and **no OPENAI_API_KEY**;
+no service-role/admin credential belongs in the app. Actual runtime protection,
+authorized-viewer login, response headers, session recognition and redirect
+acceptance remain pending deployment. Missing OpenAI configuration returns 503
+after verified auth/input and before quota RPC/provider construction.
+
+Local redacted receipts: `.verification/private-staging/ci-c887705.json` and
+`ci-c887705.log`. Credentials, account data, JWTs and cookies must stay out of
+receipts. The immutable migration hash was reverified unchanged. Quota RPC
+acceptance still requires separate schema and policy approvals.
+
 Updated 2026-09-29 02:20 UTC (2026-09-28 evening America/New_York). **STOP: preflight is partial;
 remote migration and policy approval are not yet requested.**
 This packet authorizes no mutating SQL execution, project creation, entitlement setting,
