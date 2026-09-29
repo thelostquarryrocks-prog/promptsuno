@@ -19,9 +19,10 @@ Authenticated read-only follow-up (2026-09-28 evening): the earlier sign-in
 blocker below is historical. The exact designated project is now accessible;
 see the [redacted preflight receipt](Compiler-Quota-Staging-Preflight-2026-09-28.md)
 and updated [approval packet](Compiler-Quota-Staging-Approval.md). No remote
-migration/policy ran. The dashboard labels the branch main/PRODUCTION despite
-the user's staging designation; runner access, real-JWT and provider-control
-gaps remain explicit. No application or traffic approval is requested yet.
+migration/policy ran. The dashboard's main/PRODUCTION label is documented default
+behavior without GitHub integration and does not override the user's staging
+designation. Runner access, real-JWT and provider-control gaps remain explicit.
+No application or traffic approval is requested yet.
 
 Remote inspection on 2026-09-28 verified PR #2 is an open draft at
 `3d44bfdb6ee4e6f44a65faf4c30cea26df58861a`, branch

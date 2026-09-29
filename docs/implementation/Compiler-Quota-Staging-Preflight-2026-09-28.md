@@ -39,7 +39,7 @@ redacted configuration receipt, not migration execution or traffic acceptance.
 | Region | `us-east-1`, East US (North Virginia) |
 | Branch badge | `main / PRODUCTION`; no additional branches shown |
 | User designation | The user designated this exact ref as staging |
-| Unresolved distinction | Dashboard does not label it staging; owner confirmation of dedicated staging use remains outstanding |
+| Label interpretation | Supabase's default main-branch label does not override the user's explicit staging designation; no repeated designation approval is required |
 | Database / owner | `postgres` / `postgres` |
 | Server | PostgreSQL 17.6, aarch64 Linux, gcc 15.2.0, 64-bit |
 | Dashboard service versions | Postgres `17.6.1.166`; PostgREST `14.5`; Auth `2.197.0` |
@@ -50,7 +50,12 @@ redacted configuration receipt, not migration execution or traffic acceptance.
 Sources: [overview](https://supabase.com/dashboard/project/mtzrvekmsmpflbsqgpcc),
 [general settings](https://supabase.com/dashboard/project/mtzrvekmsmpflbsqgpcc/settings/general),
 and catalog batch Q1. These observations do not establish absence of production
-consumers. The badge mismatch is not permission to select another project.
+consumers. Follow-up review of [Supabase's dashboard branching documentation](https://supabase.com/docs/guides/deployment/branching/dashboard)
+confirms that projects without GitHub integration display the same main/PRODUCTION
+label. The target overview showed no connected repository. The earlier receipt's
+inference that this label itself required a second staging confirmation was too
+strong and is superseded here. The exact user-designated target remains fixed;
+no project, branch, consumer or setting was changed.
 
 ## Migration history, ownership and access
 
@@ -282,8 +287,8 @@ A browser session does not authenticate a CLI. Actual runner authentication,
 operator identity in its target connection and target pending-file list still
 must be verified before the application decision is requested.
 
-Application approval is withheld pending dedicated-staging confirmation and a
-fully reviewed runner receipt. Real-JWT and provider configuration gaps remain
+Application approval is withheld pending a fully reviewed authenticated runner
+receipt and real-JWT preflight evidence. Provider configuration gaps remain
 explicit. The exact migration and the private policy `(true,3,60,20,86400)` are
 separate decisions; neither is approved or executed by this receipt. See the
 [approval packet](Compiler-Quota-Staging-Approval.md) for sequence and gates.

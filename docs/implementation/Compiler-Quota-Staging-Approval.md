@@ -14,8 +14,11 @@ The user explicitly designated this staging target on 2026-09-28:
 - Dashboard: [exact project](https://supabase.com/dashboard/project/mtzrvekmsmpflbsqgpcc).
 - Project name: **promptsuno**; organization: **thelostquarryrocks-prog's Org**
   (`gattjolcitbrzqvxxhsa`); region: **us-east-1**, East US (North Virginia).
-- Dashboard branch label: **main / PRODUCTION**. User designation is staging;
-  dedicated-staging use despite this label still needs owner confirmation.
+- Dashboard branch label: **main / PRODUCTION**. Supabase documents this default
+  label on projects without a GitHub integration, which matches the inspected
+  target. The user's explicit staging designation remains authoritative; the
+  label alone is not a conflicting environment designation. See the
+  [dashboard branching documentation](https://supabase.com/docs/guides/deployment/branching/dashboard).
 
 Historical access receipt, superseded by the authenticated inspection below:
 the exact dashboard redirected to Supabase sign-in
@@ -42,8 +45,8 @@ editing the migration. The API exposes `public` and `graphql_public`, and the
 authenticated statement timeout is configured as 8s; the route aborts at 5s.
 `auth.uid()` compatibility does not prove signature verification or revocation.
 
-Application decision remains withheld: reconcile the staging/PRODUCTION label,
-verify the proposed runner's authenticated target identity and history behavior,
+Application decision remains withheld: verify the proposed runner's
+authenticated target identity and history behavior,
 and resolve the stated JWT preflight gaps. Provider funding-project designation
 and actual spend controls remain unavailable. Signup is open, CAPTCHA is off,
 and redirects are local-only. Traffic approval remains separate and blocked.
@@ -131,7 +134,7 @@ JWTs, cookies or keys into an evidence artifact.
 
 ## Proposed application and verification sequence (approval gated)
 
-1. Resolve the staging-label distinction and finish the missing preflight facts.
+1. Finish the missing authenticated runner and JWT preflight facts.
    Freeze the reviewed migration hash and approved target; retain a redacted
    preflight receipt. Keep compiler traffic quiesced and paid provider calls
    disabled. Establish operator access and the rollback path first. Record an
@@ -268,8 +271,8 @@ dependency/data assessment and approval. Remote rollback has not been executed.
 ## Exact outstanding decision
 
 **Do not request migration approval yet.** Authenticated dashboard access is
-available, but dedicated-staging confirmation, runner connection verification
-and the real-JWT preflight limitations are unresolved. The provider project is
+available, but runner connection verification and the real-JWT preflight
+limitations are unresolved. The provider project is
 also not identified for spend inspection. This packet is reviewable preparation,
 not a claim that all preflight gates passed.
 
