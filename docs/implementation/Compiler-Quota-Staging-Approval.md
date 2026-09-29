@@ -1,7 +1,8 @@
 # Compiler quota staging migration approval packet
 
-Prepared 2026-09-28. **STOP: remote migration and policy approval required.**
-This packet authorizes no SQL execution, project creation, entitlement setting,
+Updated 2026-09-28 evening (2026-09-29 UTC). **STOP: preflight is partial;
+remote migration and policy approval are not yet requested.**
+This packet authorizes no mutating SQL execution, project creation, entitlement setting,
 paid model calls, Vercel linking/deployment, promotion or merge.
 
 ## Target and observed facts
@@ -11,31 +12,53 @@ The user explicitly designated this staging target on 2026-09-28:
 - Project ref: **`mtzrvekmsmpflbsqgpcc`**.
 - Project endpoint: [designated Supabase target](https://mtzrvekmsmpflbsqgpcc.supabase.co).
 - Dashboard: [exact project](https://supabase.com/dashboard/project/mtzrvekmsmpflbsqgpcc).
-- Human-readable project name, organization and region: **not observed**.
+- Project name: **promptsuno**; organization: **thelostquarryrocks-prog's Org**
+  (`gattjolcitbrzqvxxhsa`); region: **us-east-1**, East US (North Virginia).
+- Dashboard branch label: **main / PRODUCTION**. User designation is staging;
+  dedicated-staging use despite this label still needs owner confirmation.
 
-Observed read-only access: the exact dashboard redirects to Supabase sign-in
+Historical access receipt, superseded by the authenticated inspection below:
+the exact dashboard redirected to Supabase sign-in
 with this project as its return target. A credential-free GET to `/rest/v1/`
 on the designated endpoint returned HTTP 401, `No API key found in request`.
 This proves a responding protected API gateway, not project ownership or SQL
 configuration. No API key was supplied and no RPC/model/mutation was invoked.
 The operator was asked to sign in through the UI without sharing credentials.
 
-Repository inspection found only `supabase/migrations/`, no Supabase config/link
-metadata, no local `.env*`, no Supabase CLI on PATH, and no Supabase/database
-credential environment variable names. No Supabase connector is available.
-Authenticated inspection is blocked by the dashboard sign-in and absent
-management/database access. Migration history, object ownership/default ACLs,
-exposed schemas, Auth/JWT setup, authenticator memberships, grants, database
-version and region remain **unverified**, rather than assumed from local tests.
-Approval is incomplete until read-only preflight confirms the designated target.
-Local PostgreSQL 17 uses an Auth shim and cannot establish these target facts.
+**Fresh authenticated receipt:** existing Chrome operator authentication reached
+the exact target. Owner access and database role `postgres` were observed. Six
+explicit read-only SQL transactions and dashboard inspection established target
+identity, PostgreSQL 17.6, relevant owners/default ACLs/memberships/RLS,
+`auth.uid()` JSON-claim compatibility, API exposure and configured deadlines,
+Auth settings and the Supabase spend cap. See the
+[redacted receipt](Compiler-Quota-Staging-Preflight-2026-09-28.md) for facts,
+sources, exact limitations and the distinction between configuration and real
+JWT acceptance. No migration, RPC reservation or policy insertion ran remotely.
+
+The migration-history table and all quota objects are absent. Existing
+`profiles`, `prompts` and `handle_new_user` are present; this is not an empty
+application database. No observed ACL/ownership/collision difference requires
+editing the migration. The API exposes `public` and `graphql_public`, and the
+authenticated statement timeout is configured as 8s; the route aborts at 5s.
+`auth.uid()` compatibility does not prove signature verification or revocation.
+
+Application decision remains withheld: reconcile the staging/PRODUCTION label,
+verify the proposed runner's authenticated target identity and history behavior,
+and resolve the stated JWT preflight gaps. Provider funding-project designation
+and actual spend controls remain unavailable. Signup is open, CAPTCHA is off,
+and redirects are local-only. Traffic approval remains separate and blocked.
 
 Publication evidence: [stacked draft PR #4](https://github.com/thelostquarryrocks-prog/promptsuno/pull/4)
 contains the exact base/head and reviewed CI receipts. The initial
 [hosted CI run](https://github.com/thelostquarryrocks-prog/promptsuno/actions/runs/36445287563)
 passed real PostgreSQL 17.11 17/17, units 95/95 and browsers 21/21; build and
 typecheck passed. Final-head evidence is maintained in the draft PR description.
-No hosted fixture result establishes real staging Auth/SQL acceptance.
+Fresh GitHub inspection confirmed PR #4 still OPEN/DRAFT at
+`90848ad6249262144c3894eddc5a694db43304cd`, with
+[CI 36447718209](https://github.com/thelostquarryrocks-prog/promptsuno/actions/runs/36447718209)
+completed/success. No hosted fixture result establishes real staging Auth/SQL
+acceptance. Any subsequent documentation commit has a different head and needs
+its own CI evidence after separately authorized publication.
 
 ## Immutable migration and proposed policy
 
@@ -78,7 +101,12 @@ Use INSERT rather than silently overwriting an existing policy. An unexpected
 row/object or migration conflict stops the procedure for investigation. These
 values are not final free/premium entitlements or a global dollar-spend cap.
 
-## Read-only target preflight required before execution
+## Read-only target preflight and remaining gaps
+
+The linked receipt supersedes the earlier blanket access blocker. Items below
+remain the pre-application checklist; observations are not guarantees about a
+later operator connection or changed settings. Never read Auth user records,
+JWTs, cookies or keys into an evidence artifact.
 
 1. Record the operator-confirmed project name/ref, staging designation, region,
    dashboard identity and database identity; compare them in the same session.
@@ -103,16 +131,21 @@ values are not final free/premium entitlements or a global dollar-spend cap.
 
 ## Proposed application and verification sequence (approval gated)
 
-1. Freeze the reviewed migration hash and approved target; retain a redacted
+1. Resolve the staging-label distinction and finish the missing preflight facts.
+   Freeze the reviewed migration hash and approved target; retain a redacted
    preflight receipt. Keep compiler traffic quiesced and paid provider calls
-   disabled. Establish operator access and the rollback path first.
-2. Apply exactly the reviewed migration through the agreed migration runner.
+   disabled. Establish operator access and the rollback path first. Record an
+   operator-approved recoverability plan; the overview showed no backups.
+2. Use the pinned runner procedure below; review the exact pending-file list and
+   runner receipt before requesting **Decision A**. After that explicit approval,
+   apply exactly the reviewed migration through that runner.
    Verify its history entry, object owner/ACLs, empty search_path, zero arguments,
    RLS/no client policies and private-schema exclusion. Stop on discrepancy.
 3. Before policy insertion, verify a real verified account's RPC fails closed;
    the guarded route must return generic 503 and make no model call. Anonymous,
    expired, forged and missing sessions must not reserve or reach the provider.
-4. Insert the approved singleton row separately; inspect only approved numeric
+4. Only after separate **Decision B**, insert the approved singleton row;
+   inspect only approved numeric
    fields. Use disposable staging accounts and direct authenticated RPCs to test
    concurrency, isolation, 3-attempt burst exhaustion, sustained exhaustion,
    integer Retry-After, independent UTC-aligned rollovers and absence of direct
@@ -131,6 +164,64 @@ values are not final free/premium entitlements or a global dollar-spend cap.
    technology, actual Suno/audio acceptance and deployment require their own
    later authority. This packet does not authorize them.
 
+### Proposed runner and history procedure
+
+Supabase CLI **2.118.0**, Windows amd64, official release archive SHA-256
+`e8eb5871b2a9e9b496d19f3fca4851d0c2a1bb8059613692d8906b5dc5fc2aad`.
+Downloaded archive matched the release's checksums; `--version` returned 2.118.0.
+[Release](https://github.com/supabase/cli/releases/tag/v2.118.0).
+Use an isolated local runner directory containing only the byte-verified
+`202609280001_compiler_quota.sql`, with generated local config and no seeds,
+custom roles or Vault secret configuration. Do not add link metadata or secrets
+to this repository. No global CLI installation or credential changes are needed.
+
+The installed CLI help explicitly states that `db push` updates configured Vault
+secrets unless `--skip-vault` is supplied. **Require `--skip-vault` on every
+dry-run/application command.** Do not use `--include-all`, `--include-roles`,
+`--include-seed`, `--debug`, `--create-ticket`, reset, repair or config push.
+
+Proposed operator sequence, **not executed against the target**. All CLI commands
+below use the pinned executable and the same isolated working directory; verify
+that directory's linked ref is `mtzrvekmsmpflbsqgpcc` before each remote command.
+
+1. Verify runner version/archive and migration hash again. The migration
+   inventory must contain exactly one file, version `202609280001`.
+2. Authenticate the existing operator in the CLI through user-controlled sign-in
+   if necessary. Never transfer browser tokens or put passwords in command-line
+   arguments/transcripts. A dashboard session alone does not prove CLI access.
+3. In the isolated runner directory, explicitly link only
+   `supabase link --project-ref mtzrvekmsmpflbsqgpcc`. Verify the resulting target
+   ref and a read-only database identity/role receipt through that connection.
+   Require effective `postgres`, the reviewed memberships/privileges, database
+   identity and target. Stop for any role/ref/default-ACL difference.
+4. Repeat collision/history checks and inspect the dry-run list using
+   `supabase db push --linked --skip-vault --dry-run`.
+   Stop if any file besides the pinned migration is pending, or any target object
+   or history version now exists. Do not bootstrap/repair history during preflight
+   merely to obtain a clean display.
+5. Present the final runner receipt and request Decision A. Only after explicit
+   approval, run
+   `supabase db push --linked --skip-vault`.
+   Read the interactive target/file confirmation; do not auto-confirm remotely.
+   Supabase documents that the runner creates `supabase_migrations.schema_migrations`
+   on first application and records successful versions. This metadata write
+   must be part of Decision A; it is not contained in the immutable migration.
+6. Inspect exactly one history entry for `202609280001`, expected name and stored
+   statements against the reviewed file. Verify all migration objects and ACLs,
+   then the schema-cache path and missing-policy rejection. On any ambiguous
+   transport failure, query history and objects before retrying; never rerun or
+   mark applied blindly. Dashboard SQL alone is not an equivalent runner.
+
+Reference: [CLI migration/history behavior](https://supabase.com/docs/reference/cli/supabase-db-push),
+[dashboard bypass of migration history](https://supabase.com/docs/guides/deployment/database-migrations).
+These instructions are a proposal; authenticated CLI target access has not been
+established. The companion receipt records a successful local-only rehearsal:
+dry-run left history/schema absent; application registered the sole version
+with 13 statements, preserved expected function ACLs and seeded no policy.
+The final disposable cluster shut down normally. Earlier launcher/fixture
+failures are retained separately. This does not prove remote connection identity
+or recovery from an interrupted history-registration step.
+
 ## Credentials, signup and global spend controls
 
 Use the existing public Supabase URL/key plus the verified user session in the
@@ -142,13 +233,19 @@ local fixture credentials and cannot make real paid calls.
 
 Before any enabled pilot, approve invitation/closed signup or equivalent abuse
 controls, confirmation requirements, CAPTCHA/rate limits, account-deletion and
-multi-account response. Actual target signup settings remain unobserved.
+multi-account response. Observed signup is open, confirmation on, CAPTCHA off;
+Site URL is localhost and redirect allowlist empty. Approve exact HTTPS origins
+and address these settings before traffic. No Auth change is authorized here.
 Per-account quotas do not constrain account creation or total service spend.
 
 Approve provider/project budget alerts, monitored thresholds, a named operator,
 response times and a tested traffic/provider kill switch. Verify whether each
-provider setting is a hard enforcement control or merely an alert; no observed
-provider configuration or hard dollar cap is claimed. Keep the compiler disabled
+provider setting is a hard enforcement control or merely an alert. Supabase Free
+spend cap is observed enabled; OpenAI funding project and controls are unobserved.
+[Official OpenAI documentation](https://developers.openai.com/api/docs/guides/spend-limits)
+describes optional hard limits separately from
+alerts; verify the actual enforcement switch and allow for propagation overshoot.
+No configured OpenAI hard dollar cap is claimed. Keep the compiler disabled
 until aggregate cost exposure is acceptable. Existing caps are maxRetries=0,
 30s provider timeout and 2048 output tokens; input bytes do not measure token cost.
 
@@ -170,10 +267,28 @@ dependency/data assessment and approval. Remote rollback has not been executed.
 
 ## Exact outstanding decision
 
-Complete authenticated read-only preflight for project `mtzrvekmsmpflbsqgpcc`
-first. Then explicitly approve application of migration SHA-256
-`bf5b5ca0a2a6b4519a53e786975e489a809d995d84601d78b95e9d502a3bbd19`
-to that exact target and, separately, insertion of `(true, 3, 60, 20, 86400)` under the
-reviewed operator, verification and rollback procedure. Resolve signup/global
-spend controls before enabling traffic. No production, entitlement, paid-call,
-Vercel, PR promotion or merge permission is implied.
+**Do not request migration approval yet.** Authenticated dashboard access is
+available, but dedicated-staging confirmation, runner connection verification
+and the real-JWT preflight limitations are unresolved. The provider project is
+also not identified for spend inspection. This packet is reviewable preparation,
+not a claim that all preflight gates passed.
+
+After those application-preflight gaps close, present two explicit choices:
+
+- **Decision A - schema only:** approve applying only version `202609280001`,
+  migration SHA-256 `bf5b5ca0a2a6b4519a53e786975e489a809d995d84601d78b95e9d502a3bbd19`,
+  to `mtzrvekmsmpflbsqgpcc` under the verified postgres operator, pinned CLI
+  procedure (including migration-history initialization/registration and
+  `--skip-vault`), with traffic quiesced, empty policy and no paid calls. Schema
+  refresh and bounded post-application verification must be expressly included.
+- **Decision B - private pilot policy:** separately approve insertion, only
+  after Decision A and missing-policy rejection, of `(true, 3, 60, 20, 86400)`:
+  three attempts per UTC-aligned 60-second window and twenty per UTC-aligned
+  86,400-second window. No overwrite, entitlements or traffic enablement implied.
+  Account creation, quota-consuming acceptance calls and cleanup/deletion need
+  their own explicitly bounded staging-account authority.
+
+Resolve signup, redirects, session acceptance, aggregate spend controls, operator
+response and kill-switch verification before a separate traffic decision. No
+production, paid-call, Vercel, deployment, PR promotion or merge permission is
+implied by either decision.
