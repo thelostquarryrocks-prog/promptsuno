@@ -1,5 +1,146 @@
 # Compiler quota staging migration approval packet
 
+## Real staging session receipt - 2026-09-29
+
+**Partial sign-in acceptance:** the user completed private administrator
+onboarding and reported successful sign-in. A real signed-in workspace was
+observed; fresh server recognition, refresh, disabled compiler response,
+host-session isolation and application signed-out rejection were exercised.
+The user subsequently completed re-login in a separate Chrome tab observed at
+965x384. Fresh navigation and reload in the 390x844 review tab recognized that
+restored session. Credential submission specifically at 390x844 was not observed
+and is not claimed. No account record, email, identifier, credential, JWT or
+cookie value was extracted into evidence.
+This receipt supersedes the pending real-session statements in earlier receipts
+only for the checks explicitly listed below; historical records stay intact.
+
+The test used the unchanged protected production deployment
+`dpl_4xfWpEcmY7D5ML3s5e2r7km9SGs7` at source
+`41bf9fc7cc30ff8fc35cd83e5f1994d408957e22`. The user's original workspace and
+its four existing selections were preserved. All test intent was synthetic and
+entered into separate review tabs. Sign-out changes the shared Auth session;
+the original page remains open with its local selections. The user has restored
+the shared stable-origin session through secure re-login.
+
+| Check | Observed result |
+| --- | --- |
+| User-controlled account/login | Private admin password flow completed by the user; signed-in workspace observed without reading identity fields |
+| Fresh server recognition | Separate HTTPS GET `/workspace` stayed on the workspace with Sign Out present; Vercel runtime receipt records HTTP 200. Reviewed middleware gates this path with real Supabase `auth.getUser()` |
+| Session persistence | Reload stayed on `/workspace` with Sign Out present; no fixture Auth or route interception |
+| Disabled compiler | Synthetic Piano selection and notes submitted through the deployed UI. Runtime POST `/api/generate` returned 503; error feedback retained the node and notes. Environment recheck shows no OPENAI_API_KEY; reviewed missing-key guard precedes quota RPC/provider construction |
+| Signed-out API | Sign Out in a separate review tab completed to `/login`. Retained workspace UI then submitted synthetic intent; runtime POST `/api/generate` returned 401 and error feedback retained editable intent. Vercel viewer authorization remained available; this is separate from anonymous Vercel edge challenge evidence |
+| Signed-out workspace | Fresh reload redirected `/workspace` to `/login`; runtime records 307 followed by login response |
+| Cookie/origin behavior | Stable HTTPS origin carried the real session through server navigation, refresh and same-origin JSON POST. While stable host was signed in, a fresh generated-host workspace request redirected to its login. Sign-out invalidated application access across stable-origin tabs |
+| Mobile layout | 390x844 signed-in workspace, disabled-call feedback and signed-out failure inspected; no horizontal overflow; synthetic notes retained and removal control enabled |
+| Desktop layout | 1366x900 signed-in workspace/error feedback inspected; no horizontal overflow; notes retained; fresh session reload successful |
+| Mobile login form and restored session | Signed-out form hydrated with enabled controls and empty inputs; keyboard sequence Email -> Password -> Sign In verified. User re-login completed in a separate 965x384 tab. Fresh navigation and reload at 390x844 then stayed on the signed-in workspace without horizontal overflow; credential submission specifically at 390x844 was not observed |
+| Browser diagnostics | Captured review-page console contains a THREE.Clock deprecation warning; no other warning/error entries captured. HTTP 503/401 are intentional rejection outcomes, not a clean paid-compiler success |
+
+Read-only Vercel recheck confirmed All Deployments Authentication, only the two
+production public Supabase variables, no OpenAI key and no custom domain.
+Staging `/auth/v1/settings` independently reconfirmed disabled public signup,
+email enabled and global auto-confirm disabled at 2026-09-29T06:05:39Z. The
+single exact callback entry remains as recorded below. No invitation-link flow
+was used; localhost Site URL remains a gap for future email fallback flows.
+
+Evidence scope: normal public-origin acceptance and host-session isolation were
+verified live. An authenticated forged-Origin POST returning 403, forged/expired
+JWT rejection, token-expiry refresh/rotation, replay after server revocation,
+and actual Set-Cookie attribute/authorized X-Robots-Tag response inspection
+remain unverified live. Existing hosted browser fixtures cover hostile Origin
+and forged/expired sessions; they do not replace real-project evidence. Source
+inspection of installed SSR defaults shows path `/`, SameSite Lax, HTTPOnly
+false and no Secure override in application client configuration; these are
+source observations, not an inspection of stored production-cookie attributes.
+No session credential was exported to obtain these checks. Do not claim full
+JWT/cookie hardening, email invitation acceptance or production traffic approval.
+
+Redacted receipts remain ignored in `.verification/private-staging/`:
+`runtime-redacted.json` contains only timestamp/method/status/path/source/level;
+`auth-settings-redacted.json` contains target and configuration booleans.
+Account-free synthetic screenshots: `session-mobile-disabled.png`,
+`session-desktop-disabled.png`, `session-mobile-signedout.png`,
+`session-mobile-restored.png`. The restored-session screenshot and desktop
+synthetic error screenshot were visually reviewed. Temporary viewport override
+was reset after verification. Runtime request logs were parsed in memory;
+account/header/message/identifier data was not saved.
+Quota RPC/JWT database binding still requires the separately approved remote
+migration and policy. Neither was applied, no quota reservation or paid model
+call was made by this verification, and spend controls remain unchanged.
+
+## One restricted staging tester - 2026-09-29
+
+The user's follow-up explicitly authorizes one administrator-created tester for
+their own email in `mtzrvekmsmpflbsqgpcc`, private user-entered credentials, public
+signup disabled, and the single exact staging callback allowlist entry. This
+supersedes the earlier no-account/no-Auth-setting boundary only for this work.
+Quota migration/policy, OpenAI keys or paid calls, spend changes, merge and draft
+promotion remain prohibited. At this preparation checkpoint, real-session
+acceptance was **pending**; the newer real-session receipt above supersedes that
+status for its explicitly observed checks.
+
+Current repository and hosted state were rechecked: branch
+`codex/atomic-compiler-quota`, head
+`d2e91cbb7ca0b745f21a2b5d9094285393896745`, PR #4 OPEN/DRAFT, both required
+jobs successful in [36521672689, attempt 2](https://github.com/thelostquarryrocks-prog/promptsuno/actions/runs/36521672689).
+Its earlier failed browser attempt and unsuccessful/reverted local setup
+experiments remain preserved as recorded in the PR. This pending documentation
+edit does not change the frozen deployed application at
+`41bf9fc7cc30ff8fc35cd83e5f1994d408957e22`.
+
+### Account flow chosen from the actual implementation
+
+`src/app/login/page.tsx` calls `signInWithPassword`. The callback route only
+accepts a query `code` and calls `exchangeCodeForSession`; it has no invitation
+token/hash verification or password-setup screen. Installed Supabase Auth source
+and [official invitation documentation](https://supabase.com/docs/reference/python/auth-admin-inviteuserbyemail)
+state that admin invitations do not support PKCE. A default invitation is not
+treated as a verified compatible flow for this application.
+
+Use the supported dashboard **Add user -> Create new user** password flow,
+with the individual **Auto confirm user?** option selected. The user's email
+and staging-only password are to be entered and submitted by the user in the
+secure dashboard, then used in the protected application's Sign In form.
+This administrator-only onboarding keeps public signup disabled and requires no
+new application authentication flow. No invitation was sent, no credential was
+entered by Codex. At this checkpoint account creation had not been confirmed;
+the blank form was handed off. The newer receipt records the subsequent
+user-controlled login and real server session without reading account records.
+
+### Fresh staging configuration evidence
+
+- Public signup was initially **enabled**, contrary to the desired restriction.
+  It was turned off and saved under the user's follow-up authority. Reload
+  confirmed it stayed off; an independent credential-redacted GET of staging
+  `/auth/v1/settings` returned `disable_signup=true`, email enabled and
+  `mailer_autoconfirm=false` at 2026-09-29T05:48:21Z. No signup request was sent.
+  Anonymous sign-in and manual linking stay off; global Confirm email stays on.
+  Individual admin auto-confirm does not disable the global confirmation rule.
+- Added exactly **`https://promptsuno-signin-staging.vercel.app/auth/callback`**.
+  Save and reload confirmed the allowlist contains one URL, without wildcards.
+  Site URL remains `http://localhost:3000`; it was not changed. Password login
+  does not use an email redirect. Email flows not explicitly targeting this
+  callback still have a localhost fallback and are not accepted by this receipt.
+- Vercel API reconfirmed `ssoProtection.deploymentType=all`, the same test project,
+  only production-scoped public Supabase URL/anon-key variables, no OpenAI key,
+  and no custom domain. The existing production deployment remains READY.
+  Fresh credential-free checks across generated URL and both production aliases
+  returned Vercel 302 for `/login` and Vercel 401 for POST `/api/generate`.
+  These boundary challenges still do not prove the application-level Auth 401.
+- Redacted settings receipt and account-free preparation screenshots remain
+  ignored under `.verification/private-staging/`: `auth-settings-redacted.json`,
+  `signup-disabled.png`, `callback-allowlist.png`, `tester-create-empty.png`.
+  No email, user identifier, password, OTP, token, session cookie or service-role
+  credential is included in repository evidence.
+
+After the user's secure sign-in, resume server `auth.getUser()` recognition,
+application signed-out rejection behind Vercel, cookie/origin behavior and
+mobile/desktop signed-in flow, and replace the pending status with observed
+redacted results. No quota reservation is permitted: the missing OpenAI key
+prevents quota RPC/provider construction; remote quota migration and policy
+remain separately approved gates. No runtime application code was changed or
+redeployed for this preparation.
+
 ## Protected deployment receipt and remaining human gates - 2026-09-29
 
 **Partial acceptance: protected deployment ready; real staging sign-in remains
