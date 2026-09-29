@@ -1,5 +1,188 @@
 # Compiler quota staging migration approval packet
 
+## Current decision receipt - 2026-09-29 protected acceptance follow-up
+
+**PARTIAL: redirect correction verified; live authentication acceptance remains
+incomplete. No migration, policy, provider key, spend change or traffic approval.**
+This section and its approval block supersede older current-looking status and
+decision language below. Earlier receipts remain historical evidence, including
+their failures and limitations; they are not additional approval requirements.
+
+Starting branch/head were verified as `codex/atomic-compiler-quota` /
+`0967bd6c13dd0f0feee162619139913258f9c0bb`. Tracked/index changes were absent;
+the two unrelated duplicate catalog/matrix JSON files and `desktop.ini` were
+untracked, so the whole working tree was **not** clean. All three are preserved.
+Draft PR #4 was OPEN/DRAFT at that exact head, with both required jobs successful
+in [run 36530069525](https://github.com/thelostquarryrocks-prog/promptsuno/actions/runs/36530069525).
+PR #2/#3 retain the heads recorded below. This follow-up changes documentation
+only; its final exact-head CI receipt belongs in the PR description and handoff.
+
+### Saved configuration and protected live checks
+
+Only Supabase staging project `mtzrvekmsmpflbsqgpcc` and Vercel project
+`promptsuno-signin-staging` / `prj_3MzWlBvUpiOPkBtBMbkL2rKh6ZcU` were used.
+The application remains frozen at
+`41bf9fc7cc30ff8fc35cd83e5f1994d408957e22`; no redeployment occurred.
+
+| Check | Fresh observation / evidence limit |
+| --- | --- |
+| Site URL | Changed from localhost to exactly `https://promptsuno-signin-staging.vercel.app`; Save completed, then reload and a fresh field read confirmed the saved value |
+| Redirect allowlist | Reload confirmed one entry, exactly `https://promptsuno-signin-staging.vercel.app/auth/callback`; no wildcard or generated-origin entry added |
+| Signup | Independent Auth settings read confirmed public signup disabled, email enabled, global auto-confirm disabled |
+| Vercel boundary | Read-only booleans confirmed All Deployments authentication, READY frozen deployment, only public Supabase environment variables, no OpenAI key, only Vercel domains and no Git integration |
+| Existing real session | New stable-origin workspace navigation was recognized server-side. This is live Supabase Auth, not fixture interception |
+| Same-origin compiler | Synthetic Piano intent through the real browser UI produced runtime POST `/api/generate` 503; editable node/notes survived and focus returned to Generate Prompt |
+| Signed-out compiler | UI Sign Out reached `/login`; the retained synthetic workspace then produced runtime POST `/api/generate` 401. This is an application receipt behind the authenticated Vercel viewer |
+| Signed-out navigation | A fresh stable-origin `/workspace` navigation reached `/login` |
+| Host isolation | While the stable origin was signed in, fresh generated-origin `/workspace` redirected to its own `/login`; no stable-origin application session was transferred |
+| Mobile | 390x844 workspace loading, disabled compiler feedback and retained signed-out intent observed with no horizontal overflow. Login keyboard sequence Email -> Password -> Sign In checked; the credential-entry tab was independently measured at 390x844 |
+| Full mobile credential submission | User handoff requested in the secure 390x844 tab. Submission, validation feedback, redirect/loading and post-login focus at that size remain pending; no credential values or account fields were read |
+| Desktop | Fresh signed-out login measured 1366x900 with no horizontal overflow. Earlier signed-in desktop receipt remains historical; no new desktop sign-in claimed |
+| Console | Review-tab warning/error capture contained only the known THREE.Clock deprecation warning; no additional warning/error category was captured |
+| No quota/provider call | Environment inspection confirms key absent; the frozen route checks verified Auth, then request validity, then missing provider key, before quota RPC or OpenAI construction. Runtime statuses plus that code ordering establish these exercised rejection paths; this is not remote quota acceptance |
+
+Redacted runtime receipt records the signed-in POST 503 at epoch milliseconds
+`1790678670612` and signed-out POST 401 at `1790678859107`. Reload/navigation
+alone does **not** prove expiry-driven token rotation. No refresh token or old
+access token was copied for replay, and no session was administratively revoked.
+
+### Exact live blockers, without fixture substitution
+
+Vercel CLI 60.1.3 protected-request support was inspected and exercised with an
+explicit deployment and an unlinked temporary working directory. Tracing/debug
+were disabled; stdout/stderr stayed in memory and only allowlisted status/header
+fields and booleans were saved. No raw authenticated commands were recorded.
+The first attempts failed with curl exit 2 because the wrapper forwarded
+`--non-interactive` as a curl option; removing that argument resolved the local
+runner error. The failed attempt receipt is retained separately.
+
+The project has **no existing automation bypass**. The safe invocation did not
+create one. Stable/generated login probes returned 302; missing, malformed and
+synthetically forged session probes returned 401 without the application's
+expected JSON rejection. These are Vercel-boundary results, **not** live
+application acceptance for those three session states. The generated challenge
+had `X-Robots-Tag: noindex`; the stable challenge had none. Neither establishes
+the required authorized application header `noindex, nofollow, noarchive`.
+
+The connected Chrome API exposes DOM interaction, screenshots, console entries
+and viewport control, but no cookie metadata, network response inspection,
+authenticated request interception/replay or session-control capability.
+Its page evaluation is read-only DOM scope. Consequently authenticated hostile
+Origin 403, authorized response headers, missing/malformed/forged application
+401, expiry/rotation and revoked-session replay remain **unverified live**.
+Transferring browser credentials, creating a project-wide automation bypass,
+changing protection or substituting fixture evidence was not used to close gaps.
+Resume with a supported credential-redacting request/cookie inspection facility
+that preserves protection and the existing tester; otherwise retain these gates.
+
+An automatic approval review rejected the older receipt scripts because they
+emitted account/team identifiers. Revised scripts were approved and emit only
+timestamps, HTTP status, fixed paths, permitted robots headers and booleans.
+The rejected scripts were not executed for this acceptance run.
+
+### Cookie metadata: implementation comparison, not a live cookie audit
+
+Installed `@supabase/ssr` is 0.12.7. The application supplies no cookie option
+overrides. Source reviewed: `src/lib/supabase/client.ts`,
+`src/lib/supabase/server.ts`, `middleware.ts`, installed SSR
+`src/utils/constants.ts`, `src/cookies.ts`, `src/createServerClient.ts`, and
+Supabase JS storage-key construction. No application fix is justified by a
+demonstrated live cookie defect in this run, so no runtime code was changed.
+
+| Metadata | Installed implementation expectation | Actual stored-cookie observation |
+| --- | --- | --- |
+| Name class | `sb-<project-ref>-auth-token`, possibly chunk suffixes | Unavailable; no values read |
+| Host/domain | No Domain override; host-only expected | Stable/generated session isolation observed; attribute not inspected |
+| Path | `/` | Unverified |
+| Secure | No Secure override/default in the reviewed options | Unverified; HTTPS operation alone does not prove Secure |
+| SameSite | `lax` | Unverified |
+| HttpOnly | `false` | Unverified |
+| Expiry | Cookie maxAge 400 days; distinct from JWT expiry | Unverified |
+| Refresh | SSR writes changed session/chunks on TOKEN_REFRESHED | Fresh navigation recognized session; actual rotation unverified |
+| Sign-out deletion | Removal writes empty cookies with maxAge 0 and clears stale chunks | Application rejection after sign-out observed; actual cookie deletion unverified |
+
+[Supabase's official SSR guidance](https://supabase.com/docs/guides/auth/server-side/advanced-guide)
+explains that the browser client needs refresh-token access, recommends Lax as
+a default and generally Secure for HTTPS, and distinguishes cookie lifetime
+from server session validity. Do not force HttpOnly in this client-side flow.
+Later inspect actual metadata without values, including refresh responses and
+cache behavior; do not label inferred defaults as production observations.
+
+### One concrete approval block for the next task
+
+**PROPOSED - requires the user's explicit decision; nothing below is approved
+or executed by this receipt. Authentication gaps above remain hold points.**
+
+> Approve a staging-only, gated quota and spend-control work package for
+> `mtzrvekmsmpflbsqgpcc` and the existing protected PromptSuno staging project.
+> Apply only `202609280001_compiler_quota.sql`, SHA-256
+> `bf5b5ca0a2a6b4519a53e786975e489a809d995d84601d78b95e9d502a3bbd19`,
+> using the pinned/rehearsed runner below, including migration-history
+> initialization/registration and schema-cache refresh. First close the live
+> authentication hold points, verify the exact runner connection and target,
+> collision-free history, file inventory, operator privileges and recoverability.
+> Keep compiler traffic quiesced and the OpenAI key absent. Stop on discrepancies.
+>
+> After schema/ACL/RLS/ownership/history verification and real authenticated
+> missing-policy rejection, insert exactly `(true, 3, 60, 20, 86400)` into the
+> singleton policy using INSERT, never an overwrite. Authorize bounded direct
+> authenticated quota-only checks for the existing restricted tester, without
+> a model call: identity binding, denied table access, burst exhaustion,
+> Retry-After and rollover. Retain consumed counters. Multi-account isolation,
+> sustained-window exhaustion, account deletion and destructive/fault injection
+> tests need a separately reviewed plan; do not claim them from one tester.
+>
+> Configure only the designated OpenAI PromptSuno funding project with a
+> **$10 monthly limit and hard enforcement enabled**, plus **$5 and $8 alerts**
+> (50% and 80% of $10). Restrict allowed models to **gpt-5.6-luna only where
+> supported**, including review of any future-model default. Verify saved
+> settings through fresh read-only inspection, without a paid call. If a true
+> project hard limit or model restriction is unavailable, stop and report the
+> exact limitation; do not substitute a notification budget or broaden model
+> access. Do not change unrelated organization/project settings.
+>
+> Proposed response owner is the project owner operating this restricted pilot:
+> review spend before each test session; at $5 review usage and remaining tests;
+> at $8 stop new compiler traffic until reviewed; at the hard limit or unexpected
+> spend stop traffic and investigate. Confirm owner/coverage before enablement.
+>
+> Rollback order: keep traffic stopped, remove only the singleton policy row
+> under the approved operator, verify new reservations fail closed and observe
+> already-authorized work. Preserve schema, history and usage counters; do not
+> truncate, refund, drop objects or remove route guards. Restoration requires a
+> separate decision. On ambiguous migration/transport failure inspect history
+> and objects before retrying. Destructive reversal is a separate migration gate.
+>
+> **Traffic remains disabled after this package.** Present fresh authentication,
+> remote quota, saved spend-control and rollback evidence for a separate
+> traffic-enablement decision. Only that later decision may authorize secure
+> server-side key provisioning with verified funding-project binding, a bounded
+> paid smoke test and monitored private traffic. Keep All Deployments protection,
+> closed signup and exact redirects; no PromptSuno.com, public rollout, merge,
+> PR-ready transition or new deployment is implied.
+
+[OpenAI's official spend-limit guidance](https://developers.openai.com/api/docs/guides/spend-limits)
+distinguishes alerts from enforcement: hard limits reject affected requests but
+propagation can allow slight overshoot. The $10 proposal is not a guarantee of
+exactly zero overshoot. Existing account spend settings were not reconfigured
+or reinspected in this task; older dashboard observations below are historical.
+
+Local receipts remain ignored under `.verification/private-staging/`:
+`acceptance-config-booleans.json`, `protected-http-redacted.json`,
+`protected-http-attempt2-redacted.json`, `runtime-acceptance-redacted.json`, and
+`acceptance-mobile-signedout.png`. The three local helpers ending in `-safe.mjs`
+are also ignored and uncommitted. No account identifiers, tokens, cookie values,
+passwords, bypass values or keys were added to this receipt or new artifacts.
+
+Documentation validation: `git -c core.autocrlf=false diff --check` succeeded;
+`Get-FileHash supabase/migrations/202609280001_compiler_quota.sql -Algorithm SHA256`
+matched the immutable hash; `node .verification/quota-real/security-scan.mjs`
+scanned 78 files and 14 existing browser chunks with zero exposed credential
+values or server-only markers. `node --check` succeeded for each new local
+redacting helper. No local application build/unit/browser/database suite was
+rerun for this documentation-only change. Required hosted jobs at the final
+documentation head remain mandatory and are reported in PR #4's current body.
+
 ## Real staging session receipt - 2026-09-29
 
 **Partial sign-in acceptance:** the user completed private administrator
@@ -577,7 +760,7 @@ If a migration transaction fails, verify rollback and migration history before
 retrying. Destructive schema reversal requires a separate reviewed migration,
 dependency/data assessment and approval. Remote rollback has not been executed.
 
-## Exact outstanding decision
+## Historical outstanding decision (superseded by current decision receipt)
 
 **Do not request migration approval yet.** Authenticated dashboard SQL runner
 preflight and designated provider-configuration inspection are complete to the
