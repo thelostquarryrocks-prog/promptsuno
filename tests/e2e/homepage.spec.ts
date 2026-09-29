@@ -19,8 +19,15 @@ test('homepage communicates the product with crawlable metadata and no runtime e
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Turn musical instinct')
   await expect(page.getByRole('heading', { name: 'Lyrics Studio' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Prompt Doctor' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Learn' }).first()).toHaveAttribute('href', '/learn')
   await expect(page.locator('canvas')).toHaveCount(0)
   expect(errors).toEqual([])
+})
+
+test('workspace keeps its existing anonymous sign-in boundary', async ({ page }) => {
+  await page.goto('/workspace')
+  await expect(page).toHaveURL(/\/login$/)
+  await expect(page.getByText('Sign in to your workspace')).toBeVisible()
 })
 
 test('homepage stays readable across the required responsive matrix', async ({ page }, testInfo) => {

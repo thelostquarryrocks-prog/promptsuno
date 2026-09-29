@@ -38,8 +38,8 @@ const pillars = [
     name: 'LEARN',
     title: 'Understand what to try next.',
     body: 'Get direct, practical guidance that begins with the useful answer and reveals deeper context when you want it.',
-    link: '#monkey-methods',
-    linkLabel: 'See how learning works',
+    link: '/learn',
+    linkLabel: 'Explore Learn',
   },
   {
     index: '02',
@@ -118,7 +118,7 @@ export default function Home() {
           <span>PromptSuno</span>
         </Link>
         <nav className={styles.nav} aria-label="Primary navigation">
-          <a href="#learn">Learn</a>
+          <Link href="/learn">Learn</Link>
           <a href="#sound-brain">Build</a>
           <a href="#studio-tools">Fix</a>
         </nav>
@@ -142,9 +142,9 @@ export default function Home() {
               <Link className={styles.primaryButton} href="/workspace">
                 Open Sound Brain <Arrow />
               </Link>
-              <a className={styles.secondaryButton} href="#learn">
+              <Link className={styles.secondaryButton} href="/learn">
                 Start with Learn
-              </a>
+              </Link>
             </div>
             <p className={styles.freeNote}>
               <span aria-hidden="true">●</span> Genuinely useful for free. Go deeper only when you need to.
@@ -181,7 +181,7 @@ export default function Home() {
                 </div>
                 <h3>{pillar.title}</h3>
                 <p>{pillar.body}</p>
-                <a href={pillar.link}>{pillar.linkLabel} <Arrow /></a>
+                <Link href={pillar.link}>{pillar.linkLabel} <Arrow /></Link>
               </article>
             ))}
           </div>
@@ -296,7 +296,7 @@ export default function Home() {
           <p>A creative companion for people making music with Suno.</p>
         </div>
         <nav aria-label="Footer navigation">
-          <a href="#learn">Learn</a>
+          <Link href="/learn">Learn</Link>
           <a href="#sound-brain">Sound Brain</a>
           <a href="#studio-tools">Studio tools</a>
           <Link href="/login">Sign in</Link>

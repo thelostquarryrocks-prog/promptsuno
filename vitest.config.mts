@@ -6,10 +6,10 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    include: ["tests/**/*.test.{ts,tsx}"],
     setupFiles: ["tests/setup.ts"],
     restoreMocks: true,
     unstubGlobals: true,
     maxWorkers: 1,
   },
-  esbuild: { jsx: "automatic" },
 })

@@ -20,6 +20,7 @@ test("lesson navigation and contextual coaching work without horizontal overflow
   await page.emulateMedia({ reducedMotion: "reduce" })
   await page.goto("/learn", { waitUntil: "networkidle" })
   await expect(page.getByRole("heading", { name: "Get the answer. Then hear the difference." })).toBeVisible()
+  await expect(page.getByRole("link", { name: "PromptSuno home" }).first()).toHaveAttribute("href", "/")
   const signalAnimationDuration = await page.locator('[class*="signalGraphic"] span').first().evaluate((element) => {
     return Number.parseFloat(window.getComputedStyle(element).animationDuration)
   })

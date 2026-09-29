@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run",
+    "test:homepage": "vitest run tests/homepage.test.tsx",
     "test:learn": "vitest run tests/learn-content.test.ts tests/monkey-method.test.tsx",
+    "test:e2e": "playwright test",
     "test:e2e:learn": "playwright test --config=playwright.learn.config.ts"
   },
   "dependencies": {

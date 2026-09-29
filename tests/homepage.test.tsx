@@ -13,6 +13,8 @@ describe('public homepage', () => {
     expect(screen.getByRole('heading', { name: 'Prompt Doctor' })).toBeInTheDocument()
     expect(screen.getByText(/genuinely useful for free/i)).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: /open sound brain/i })[0]).toHaveAttribute('href', '/workspace')
+    expect(screen.getAllByRole('link', { name: 'Learn' })[0]).toHaveAttribute('href', '/learn')
+    expect(screen.getByRole('link', { name: /start with learn/i })).toHaveAttribute('href', '/learn')
     expect(screen.getByRole('link', { name: /skip to content/i })).toHaveAttribute('href', '#main-content')
   })
 

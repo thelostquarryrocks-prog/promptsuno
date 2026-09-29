@@ -6,7 +6,7 @@ import styles from "./learn.module.css"
 export function LearnHeader() {
   return (
     <header className={styles.siteHeader}>
-      <Link href="/learn" className={styles.brand} aria-label="PromptSuno Learn home">
+      <Link href="/" className={styles.brand} aria-label="PromptSuno home">
         <MonkeyMark className={styles.brandMark} />
         <span><strong>PromptSuno</strong><small>LEARN</small></span>
       </Link>
@@ -25,7 +25,7 @@ export function LearnFooter() {
   return (
     <footer className={styles.siteFooter}>
       <p><strong>PromptSuno LEARN</strong> turns music-generation uncertainty into small, testable creative moves.</p>
-      <div><Link href="/learn">All topics</Link><Link href="/workspace?tool=build&from=learn-footer">Open BUILD</Link><Link href="/workspace?tool=fix&from=learn-footer">Open FIX</Link></div>
+      <div><Link href="/">PromptSuno home</Link><Link href="/learn">All topics</Link><Link href="/workspace?tool=build&from=learn-footer">Open BUILD</Link><Link href="/workspace?tool=fix&from=learn-footer">Open FIX</Link></div>
     </footer>
   )
 }
