@@ -1,4 +1,5 @@
-import { expect, test, type APIRequestContext, type BrowserContext } from '@playwright/test'
+import type { APIRequestContext, BrowserContext } from '@playwright/test'
+import { expect, test } from './test'
 
 const input = {
   nodes: [{ node_id: 'piano', label: 'Piano', category: 'Instrument' }],

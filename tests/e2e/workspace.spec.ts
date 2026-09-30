@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './test'
 import { readFile } from 'node:fs/promises'
 import type { CompilerInput } from '../../src/lib/compiler-contract'
 import { login } from './login'

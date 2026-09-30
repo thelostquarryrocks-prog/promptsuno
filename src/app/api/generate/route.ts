@@ -40,7 +40,7 @@ export async function POST(req: Request) {
   // This check lives at the paid entry point, independent of workspace middleware.
   let supabase: Awaited<ReturnType<typeof createClient>>;
   try {
-    supabase = await createClient();
+    supabase = await createClient(req.url);
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error || !user?.id) {
       return json({ error: 'Sign in again to compile your prompt.' }, 401);
