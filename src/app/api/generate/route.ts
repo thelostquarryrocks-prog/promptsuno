@@ -39,7 +39,6 @@ export async function POST(req: Request) {
       model: 'gpt-5.6-luna',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
-        // @ts-ignore - bypassing standard SDK types for the newer developer role specification
         { role: 'developer', content: DEVELOPER_PROMPT },
         { role: 'user', content: JSON.stringify(intentPayload) }
       ],
