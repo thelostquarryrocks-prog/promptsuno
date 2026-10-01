@@ -1,5 +1,110 @@
 # Compiler quota staging migration approval packet
 
+## Current Decision B execution receipt - 2026-10-01
+
+**DECISION B COMPLETE: YES.**
+**QUOTA POLICY ACTIVE AND VERIFIED: YES.**
+**SAFE TO ADVANCE TO PROVIDER/SPEND-CONTROL PREFLIGHT: YES.**
+**SAFE TO ENABLE PAID TRAFFIC: NO.**
+
+This receipt supersedes the Decision A stop state immediately below while
+preserving it as historical evidence. It records only the explicitly authorized
+private-pilot policy activation and quota acceptance on Supabase staging project
+`mtzrvekmsmpflbsqgpcc`. The application remains at source commit
+`c85d037d3b1aa0fb69050302611cedb6b8500109`; no runtime, migration, provider,
+Vercel, production, traffic, PR-promotion or merge change was made.
+
+### Activation receipt
+
+- Final read-only preflight reconfirmed exactly one remote migration-history row
+  for version `202609280001`; the expected policy, usage and zero-argument RPC
+  objects; `postgres` ownership; `SECURITY DEFINER`; empty `search_path`;
+  `lock_timeout=3s`; RLS with zero private-table policies; no authenticated
+  private schema/table access; authenticated-only RPC EXECUTE; and no private
+  PostgREST schema exposure.
+- The operator inserted exactly one singleton policy row, transactionally, with
+  `(singleton, burst_limit, burst_window_seconds, sustained_limit,
+  sustained_window_seconds) = (true, 3, 60, 20, 86400)`. The dashboard reported
+  success on 2026-10-01 before the first verified reservation at
+  `2026-10-01T17:54:57Z`. The table has no insertion timestamp, so this receipt
+  does not invent finer server-side timing.
+- Immediate and final privileged reads each found one policy row and one exact
+  tuple match. No overwrite, update, counter reset, truncate, timestamp change,
+  data deletion or rollback occurred.
+- Three authorized disposable staging accounts were used and are referred to
+  only as A, B and C. No credential, token, cookie, email address or account UUID
+  was printed, persisted in the repository or included in this receipt.
+
+### Direct authenticated RPC acceptance
+
+- **Burst exhaustion:** in one fresh UTC-aligned window, account A received
+  `allowed=true` three times, followed by `allowed=false` with integer
+  `retry_after_seconds=44`. The private aggregate remained burst 3 and sustained
+  4 after denial, proving the rejected call incremented neither counter.
+- **Burst rollover:** after the natural minute boundary, A was allowed again and
+  the aggregate became burst 1, sustained 5. No counter or timestamp was changed
+  administratively.
+- **Concurrent serialization:** in a fresh window at `2026-10-01T18:37:00Z`,
+  four concurrent calls for B produced exactly three allows and one denial, with
+  integer retry 59. All responses were HTTP 200 RPC results; there was no 5xx,
+  deadlock, timeout or unexpected shape. An earlier bounded batch that completed
+  during client-side observation uncertainty was reconciled rather than erased;
+  final B usage is therefore sustained 7, burst 3.
+- **Cross-account isolation:** immediately after B exhausted its burst, parallel
+  calls for A and C were both allowed. B remained exhausted; one account's lock
+  and counters did not block or consume another account's allowance.
+- **Sustained exhaustion:** C reached exactly 20 allowed reservations across
+  natural UTC minute boundaries. Its immediate 21st call at
+  `2026-10-01T18:44:24Z` returned `allowed=false` and integer
+  `retry_after_seconds=18936`. The final private read shortly afterward found C
+  still at sustained 20 and burst 2, with approximately 18,914 sustained seconds
+  versus 14 burst seconds remaining. This proves the denial was governed by the
+  later sustained-window expiry and did not increment either counter.
+- Final private aggregates contained exactly three usage rows, classified without
+  identifiers as A sustained 6, B sustained 7 and C sustained 20. The extra A
+  reservation is the successful isolation call. The result is consistent with
+  every accepted direct-RPC receipt and contains no unexplained increment.
+
+### Security, application and provider regression
+
+- Authenticated direct SELECT and UPDATE attempts against both private tables,
+  plus an authenticated direct INSERT to usage, were rejected at the PostgREST
+  boundary with `PGRST106`. Anonymous RPC execution was rejected with HTTP 401 /
+  SQLSTATE `42501`. Supplying a nonexistent `user_id` argument was rejected with
+  HTTP 404 / `PGRST202`; the public RPC remains zero-argument and caller-bound.
+- Static ACL/RLS verification remained consistent after activation:
+  authenticated has RPC EXECUTE but no private schema/table access, anon has no
+  RPC EXECUTE, both private tables retain RLS and zero policies, and the private
+  schema remains outside exposed API schemas.
+- A fresh authenticated same-origin `/api/generate` request returned application
+  JSON 503 with `Cache-Control: private, no-store` because `OPENAI_API_KEY`
+  remains absent. Private aggregates were unchanged by that request, confirming
+  provider absence is checked before reservation. Provider calls made: **0**.
+- A fresh authenticated `/workspace` fetch returned 200 with
+  `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate` and
+  `X-Robots-Tag: noindex, nofollow, noarchive`. The active service worker had
+  zero protected-route cache entries while a public homepage cache entry
+  remained. Exact-head accepted hostile-Origin 403, signed-out 401 and offline
+  stale-workspace denial remain authoritative and were not rerun because this
+  operation changed only database policy data and did not redeploy the app.
+- The transient in-page acceptance helper and its disposable session material
+  were explicitly removed after verification. No browser storage export, HAR,
+  trace, screenshot or raw network diagnostic containing session material was
+  created.
+
+### Final state and stop gate
+
+The singleton policy is active and verified at `(true, 3, 60, 20, 86400)`.
+Rollback was **not required**: no material quota or security defect was observed.
+The approved fail-closed mechanism remains deletion of only the singleton policy
+row after traffic is quiesced, but it was not invoked.
+
+Stop here. Decision B does not authorize adding a provider credential, changing
+provider/project spend controls, making paid calls, enabling pilot or public
+traffic, deploying or promoting an application, merging PR #4, or changing
+production. The next permissible action is a separately authorized
+provider/spend-control preflight. It is not traffic authorization.
+
 ## Current Decision A execution receipt - 2026-10-01
 
 **DECISION A COMPLETE: YES.**
