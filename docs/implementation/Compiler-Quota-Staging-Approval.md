@@ -1,5 +1,97 @@
 # Compiler quota staging migration approval packet
 
+## Current Decision A execution receipt - 2026-10-01
+
+**DECISION A COMPLETE: YES.**
+**SAFE TO REQUEST DECISION B POLICY ACTIVATION: YES.**
+**DECISION B IS NOT AUTHORIZED OR ACTIVE.**
+
+This receipt supersedes older current-looking Decision A status in this packet.
+Historical receipts remain evidence of their own observations and limitations.
+The authorized schema-only migration was applied to Supabase staging project
+`mtzrvekmsmpflbsqgpcc` from source commit
+`c85d037d3b1aa0fb69050302611cedb6b8500109`. The exact migration was
+`supabase/migrations/202609280001_compiler_quota.sql`, version
+`202609280001`, SHA-256
+`bf5b5ca0a2a6b4519a53e786975e489a809d995d84601d78b95e9d502a3bbd19`,
+4,700 bytes with committed LF line endings. The existing `main` checkout was
+not used or changed.
+
+### Application receipt
+
+- Pinned Supabase CLI 2.118.0 operated from an isolated temporary runner linked
+  only to `mtzrvekmsmpflbsqgpcc`; the runner contained the one byte-verified
+  migration and no seed, custom role or Vault input.
+- Immediate read-only preflight confirmed database `postgres`, PostgreSQL 17.6,
+  effective operator `postgres` with the required privileges, no migration
+  history table, no quota schema/tables/RPC collision and no private-schema API
+  exposure. No Auth user records were read.
+- The pre-application `db push --linked --skip-vault --dry-run` listed exactly
+  `202609280001_compiler_quota.sql`, with no seeds, roles, Vault changes or
+  unrelated migration. The interactive application then reported that exact
+  migration applied successfully. No ambiguous transport failure occurred.
+- Post-application CLI history lists one local/remote version,
+  `202609280001`. A final `--skip-vault --dry-run` reports the remote database
+  up to date with empty migration, seed and role lists.
+- Remote history contains exactly one row for version `202609280001`, name
+  `compiler_quota`, with 13 registered statements matching the reviewed
+  migration statement heads. No unrelated migration was applied.
+
+### Post-application database verification
+
+- `compiler_quota_private.policy`, `compiler_quota_private.usage` and
+  zero-argument `public.reserve_compiler_attempt()` exist and are owned by
+  `postgres`. The private tables have their expected primary-key indexes.
+- The function is `SECURITY DEFINER`, has `search_path=""` and
+  `lock_timeout=3s`, uses `auth.uid()`, contains static schema-qualified SQL and
+  contains no dynamic `EXECUTE`.
+- RLS is enabled on both private tables and each has zero policies. PUBLIC,
+  `anon`, `authenticated` and `service_role` have no private schema/table access.
+  Only `authenticated` has RPC EXECUTE; PUBLIC and `anon` do not.
+- An anonymous direct function call was rejected with SQLSTATE `42501`. An
+  authenticated direct private-table read was rejected with SQLSTATE `42501`;
+  static ACL verification also confirmed no authenticated UPDATE privilege.
+- `compiler_quota_private` remains outside the exposed PostgREST schemas. A
+  schema reload completed, and linked type generation resolves
+  `reserve_compiler_attempt` with `Args: never` and `Returns: Json`.
+- Policy row count is 0 and usage row count is 0. No prompt, relationship-note,
+  IP, cookie or provider-result columns/data exist, and no account-history table
+  was created.
+- A direct RPC through the disposable account's real signed browser session
+  resolved the argument-free PostgREST binding and returned HTTP 500 with
+  SQLSTATE `55000`, `Compiler quota is not configured`. No JWT, cookie, account
+  identifier or credential was returned, logged or persisted. This is the
+  required missing-policy fail-closed result; no reservation or provider call
+  occurred.
+
+### Protected staging regression and stop state
+
+- The accepted deployment remains at the same application SHA. A fresh
+  authenticated workspace reload retained the session and returned HTTP 200
+  with `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate`.
+- With the service worker bypassed and the browser forced offline, `/workspace`
+  reached `ERR_INTERNET_DISCONNECTED`; protected workspace content was not
+  served from a browser cache. Normal online navigation recovered the
+  authenticated workspace.
+- A fresh authenticated same-origin `/api/generate` request returned application
+  JSON 503 with `Cache-Control: private, no-store` because `OPENAI_API_KEY`
+  remains absent. A credential-free request returned 401 at the protected
+  deployment boundary. The previously accepted exact-deployment hostile-Origin
+  application 403, signed-out application 401, secure host-only/Lax/path `/`
+  cookie attributes and PWA boundary remain authoritative; the database-only
+  migration did not change or redeploy those application paths.
+- Vercel environment inspection still shows only the two public Supabase
+  variables and no `OPENAI_API_KEY`. Paid/provider calls made during Decision A:
+  0. Compiler traffic remains quiesced.
+- The policy table is empty, so the deployed schema is already fail-closed. The
+  approved future emergency-disable mechanism remains deletion of the singleton
+  policy row after traffic is quiesced; no rollback, drop, truncate or counter
+  reset was executed.
+
+Stop here. Do not insert `(true, 3, 60, 20, 86400)`, add provider credentials,
+enable traffic, promote or merge PR #4, or perform any Decision B action without
+a separate explicit authorization.
+
 ## Current authentication gate decision - conditional design approval
 
 **AUTHENTICATION PREREQUISITES ARE CLOSED: NO.**
