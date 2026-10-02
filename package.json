@@ -4,14 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:quota-db": "node tests/db/compiler-quota.mjs",
     "test:homepage": "vitest run tests/homepage.test.tsx",
     "test:learn": "vitest run tests/learn-content.test.ts tests/monkey-method.test.tsx",
-    "test:e2e": "playwright test",
     "test:e2e:learn": "playwright test --config=playwright.learn.config.ts"
   },
   "dependencies": {
