@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   const next = searchParams.get('next') ?? '/workspace'
 
   if (code) {
-    const supabase = await createClient()
+    const supabase = await createClient(request.url)
     
     // Securely exchange the code for an active user session
     const { error } = await supabase.auth.exchangeCodeForSession(code)

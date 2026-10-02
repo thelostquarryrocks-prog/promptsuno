@@ -12,10 +12,16 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+/.verification/
 
 # next.js
 /.next/
 /out/
+/public/sw.js
+/public/swe-worker-*.js
+/public/workbox-*.js
 
 # production
 /build
