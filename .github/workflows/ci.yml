@@ -115,10 +115,6 @@ jobs:
       - name: Production build
         id: build
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        env:
-          # Main eagerly constructs the SDK during build. This cannot authenticate;
-          # it is scoped to compilation and is absent from unit/browser test steps.
-          OPENAI_API_KEY: ci-build-placeholder-not-a-credential
         run: npm run build
       - name: Install browser test dependencies
         id: browsers

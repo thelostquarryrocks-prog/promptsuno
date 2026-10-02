@@ -17,7 +17,7 @@ test.afterEach(async ({ page }) => {
   await page.goto('about:blank', { waitUntil: 'commit', timeout: 10_000 })
 })
 
-test('selection, authored notes, loading, error retry, clarification, edited copy/export, and keyboard removal', async ({ page, context }, testInfo) => {
+test('selection, authored notes, loading, error retry, and clarification preserve exact intent', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
   page.on('console', message => { if (message.type() === 'error' && !message.text().includes('status of 502')) errors.push(message.text()) })
@@ -70,6 +70,23 @@ test('selection, authored notes, loading, error retry, clarification, edited cop
     { nodes, relationship_notes: notes },
     { nodes, relationship_notes: `${notes}\nKeep foreground piano dry.` },
   ])
+  expect(errors).toEqual([])
+})
+
+test('edited Styles copy/export and keyboard removal preserve authored notes', async ({ page, context }, testInfo) => {
+  const errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+  await login(page)
+  await page.getByText('Choose nodes without dragging').click()
+  for (const node of nodes) await page.getByRole('button', { name: `Collect ${node.label}`, exact: true }).click()
+  await page.getByLabel('Relationship notes').fill(`${notes}\nKeep foreground piano dry.`)
+  await page.route('**/api/generate', async route => {
+    expect(route.request().postDataJSON()).toEqual({ nodes, relationship_notes: `${notes}\nKeep foreground piano dry.` })
+    await route.fulfill({ json: { version: '1.0.0', status: 'ready', styles, coverage: nodes.map(node => ({ node_id: node.node_id, status: 'preserved' })), interpretations: [], questions: [] } })
+  })
+  await page.getByRole('button', { name: 'Generate Prompt' }).click()
+  await expect(page.getByLabel('Editable Styles prompt')).toHaveValue(styles)
   const edited = `${styles}\nPiano stays dry.`
   await page.getByLabel('Editable Styles prompt').fill(edited)
   // Chromium provides readable browser clipboard permissions; WebKit uses a
