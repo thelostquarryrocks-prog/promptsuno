@@ -3,7 +3,8 @@ import { defineConfig, devices } from '@playwright/test'
 const chromiumLaunchOptions = { args: ['--enable-unsafe-swiftshader'] }
 
 export default defineConfig({
-  testDir: './tests/e2e',
+  testDir: './tests',
+  testMatch: ['e2e/**/*.spec.ts', 'e2e-learn/**/*.spec.ts'],
   fullyParallel: false,
   workers: 1,
   retries: 0,
