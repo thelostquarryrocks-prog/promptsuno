@@ -1,12 +1,17 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Current status
 
-**Hosting blocked:** the paid compiler requires a verified Supabase session and a
-durable quota reservation. Disposable local PostgreSQL verification passed; the
-quota migration remains unapplied remotely. Approved launch configuration and
-real Supabase/account/hosting acceptance remain outstanding.
-Do not follow the deployment instructions below until those gates are approved
-and satisfied. See [atomic compiler quota and hosting gates](docs/implementation/Atomic-Compiler-Quota.md)
-and [paid compiler security](docs/implementation/Paid-Compiler-Security.md).
+As of 3 October 2026; this status supersedes historical pending gates in older documents.
+
+- Main SHA at this status update (after PR #6): `40896ced062ea94a1ce580577477de248ae74123`; subsequent status edits are docs only.
+- Staging quota migration applied and accepted (Decision A); quota activation and acceptance complete (Decision B).
+- Provider controls verified: $10 hard cap, alerts at $5/$8/$10, and `gpt-5.6-luna` only.
+- Exactly one paid smoke passed; temporary key revoked, provider variable removed, staging restored keyless.
+- Signup remains closed; public paid traffic disabled; production untouched.
+- Remaining gates: production identity repair/credential provisioning, signup or paid-traffic enablement, every CLI deployment, and production/DNS changes require explicit owner approval.
+- No Vercel project has Git connected; merges do not deploy. Never repeat completed migration, activation, controls or paid smoke without an explicit owner request.
+- Evidence and history: [operations log](docs/implementation/OPS-LOG.md); its dated inventories and pending gates are historical.
+
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
 

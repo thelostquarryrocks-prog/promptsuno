@@ -1,3 +1,4 @@
+Historical as of 3 October 2026. Current state: see README.md and docs/implementation/OPS-LOG.md.
 # PromptSuno Development Handoff v1
 Status: CURRENT IMPLEMENTATION HANDOFF
 Date: 2026-09-27

@@ -40,7 +40,7 @@ steps and stop.
 ## Safe without asking
 
 Code, tests, new migration files, local and `codex/*` or `docs/*` branches,
-pushing those branches, draft PRs, and deploying the staging Vercel project.
+pushing those branches, and draft PRs. All deployments require explicit approval.
 
 ## Testing policy
 
@@ -67,6 +67,8 @@ No PASS/FAIL banners, no "SAFE TO..." lines, no restating of the fixed facts.
 
 ## Fixed facts
 
+- Staging migration, quota activation, spend controls and the paid smoke are complete; never repeat them without the owner's explicit request.
+- No Vercel project has Git connected; every deploy, including any future production deploy, is an explicit CLI action that needs the owner's approval.
 - Stack: Next.js 16 App Router, Supabase Auth and Postgres, Vercel, PWA with a
   service worker. Build with `next build --webpack`.
 - Staging: Vercel project `promptsuno-signin-staging`
