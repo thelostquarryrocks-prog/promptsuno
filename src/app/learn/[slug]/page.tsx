@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { siteUrl } from "@/lib/site"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { LearnBlocks, NextActions, Sources } from "@/components/learn/LearnBlocks"
@@ -19,7 +20,7 @@ export async function generateMetadata({ params }: PageProps<"/learn/[slug]">): 
   return {
     title: page.shortTitle,
     description: page.description,
-    alternates: { canonical: `/learn/${page.slug}` },
+    alternates: { canonical: siteUrl(`/learn/${page.slug}`) },
   }
 }
 
