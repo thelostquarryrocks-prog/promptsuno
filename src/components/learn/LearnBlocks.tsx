@@ -145,7 +145,7 @@ export function NextActions({ page }: { page: LearnPage }) {
       <div>
         {page.actions.map((action) => (
           <Link href={action.href} key={action.pillar} className={styles.actionLink}>
-            <span>{action.pillar.toUpperCase()}</span>
+            <span>{action.pillar === "fix" ? "EARLY ACCESS" : "EXISTING USERS"}</span>
             <strong>{action.title}</strong>
             <p>{action.description}</p>
           </Link>

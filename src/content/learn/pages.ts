@@ -1,3 +1,4 @@
+import { EARLY_ACCESS_URL } from '@/lib/site'
 import type { LearnPage, LearnSource, MonkeyMethod } from "./types"
 
 export const learnSources = {
@@ -193,8 +194,8 @@ export const learnPages = [
     sources: [learnSources.glossary, learnSources.sliders, learnSources.exclude, learnSources.catalog],
     related: ["vocals", "song-structure", "editing"],
     actions: [
-      { pillar: "build", title: "Build from this direction", description: "Carry a concise style brief into the PromptSuno workspace.", href: "/workspace?tool=build&from=learn-style-prompts" },
-      { pillar: "fix", title: "Diagnose a muddy prompt", description: "Open the troubleshooting handoff with this lesson as context.", href: "/workspace?tool=fix&from=learn-style-prompts" },
+      { pillar: "build", title: "Sign in to your workspace", description: "For existing users. Signup and compilation are currently closed.", href: "/login" },
+      { pillar: "fix", title: "Join early access", description: "Prompt Doctor is in development. Hear when the tools open.", href: EARLY_ACCESS_URL },
     ],
   },
   {
@@ -270,8 +271,8 @@ export const learnPages = [
     sources: [learnSources.glossary, learnSources.editor, learnSources.catalog],
     related: ["lyrics", "style-prompts", "editing"],
     actions: [
-      { pillar: "build", title: "Build with an energy map", description: "Bring the section jobs into a new prompt workspace.", href: "/workspace?tool=build&from=learn-song-structure" },
-      { pillar: "fix", title: "Fix a flat arrangement", description: "Carry the transition you are diagnosing into FIX.", href: "/workspace?tool=fix&from=learn-song-structure" },
+      { pillar: "build", title: "Sign in to your workspace", description: "For existing users. Signup and compilation are currently closed.", href: "/login" },
+      { pillar: "fix", title: "Join early access", description: "Prompt Doctor is in development. Hear when the tools open.", href: EARLY_ACCESS_URL },
     ],
   },
   {
@@ -347,8 +348,8 @@ export const learnPages = [
     sources: [learnSources.glossary, learnSources.personas, learnSources.catalog],
     related: ["lyrics", "style-prompts", "editing"],
     actions: [
-      { pillar: "build", title: "Build with a vocal brief", description: "Carry the performance note into the prompt workspace.", href: "/workspace?tool=build&from=learn-vocals" },
-      { pillar: "fix", title: "Troubleshoot vocal drift", description: "Open FIX with the vocal dimension you want to isolate.", href: "/workspace?tool=fix&from=learn-vocals" },
+      { pillar: "build", title: "Sign in to your workspace", description: "For existing users. Signup and compilation are currently closed.", href: "/login" },
+      { pillar: "fix", title: "Join early access", description: "Prompt Doctor is in development. Hear when the tools open.", href: EARLY_ACCESS_URL },
     ],
   },
   {
@@ -424,8 +425,8 @@ export const learnPages = [
     sources: [learnSources.customLyrics, learnSources.glossary, learnSources.catalog],
     related: ["song-structure", "vocals", "editing"],
     actions: [
-      { pillar: "build", title: "Build around this lyric", description: "Take the hook and section map into BUILD.", href: "/workspace?tool=build&from=learn-lyrics" },
-      { pillar: "fix", title: "Fix a crowded section", description: "Carry a lyric failure case into the troubleshooting handoff.", href: "/workspace?tool=fix&from=learn-lyrics" },
+      { pillar: "build", title: "Sign in to your workspace", description: "For existing users. Signup and compilation are currently closed.", href: "/login" },
+      { pillar: "fix", title: "Join early access", description: "Prompt Doctor is in development. Hear when the tools open.", href: EARLY_ACCESS_URL },
     ],
   },
   {
@@ -502,8 +503,8 @@ export const learnPages = [
     sources: [learnSources.editor, learnSources.replace, learnSources.extend],
     related: ["song-structure", "lyrics", "style-prompts"],
     actions: [
-      { pillar: "build", title: "Rebuild the global direction", description: "Use BUILD when the full creative brief needs to change.", href: "/workspace?tool=build&from=learn-editing" },
-      { pillar: "fix", title: "Diagnose the smallest repair", description: "Open FIX with a one-sentence failure and bounded region.", href: "/workspace?tool=fix&from=learn-editing" },
+      { pillar: "build", title: "Sign in to your workspace", description: "For existing users. Signup and compilation are currently closed.", href: "/login" },
+      { pillar: "fix", title: "Join early access", description: "Prompt Doctor is in development. Hear when the tools open.", href: EARLY_ACCESS_URL },
     ],
   },
 ] as const satisfies readonly LearnPage[]

@@ -53,6 +53,8 @@ test('the service worker never stores protected routes or reveals workspace afte
   await login(page)
   await page.evaluate(() => navigator.serviceWorker.ready)
   await page.reload({ waitUntil: 'domcontentloaded' })
+  // As in login(), wait for client hydration before clicking Sign Out.
+  await expect(page.locator('canvas')).toBeVisible({ timeout: 30_000 })
 
   const cachedProtectedPaths = await page.evaluate(async source => {
     const pattern = new RegExp(source)

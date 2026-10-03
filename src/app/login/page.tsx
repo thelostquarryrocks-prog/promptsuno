@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from 'react'
 import { useRouter } from 'next/navigation'
+import { EARLY_ACCESS_URL } from '@/lib/site'
 import { createClient } from '../../lib/supabase/client'
 
 const subscribeToHydration = () => () => {}
@@ -14,7 +15,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   
   const router = useRouter()
@@ -24,7 +24,6 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    setMessage(null)
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -40,29 +39,6 @@ export default function LoginPage() {
     }
   }
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    setMessage(null)
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        // This tells Supabase where to send them after they click the email link
-        emailRedirectTo: `${location.origin}/auth/callback`,
-      },
-    })
-
-    if (error) {
-      setError(error.message)
-    } else {
-      setMessage('Check your email for the confirmation link!')
-    }
-    setLoading(false)
-  }
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#121212] p-6 text-white">
       <div className="w-full max-w-sm space-y-8">
@@ -70,6 +46,8 @@ export default function LoginPage() {
           <h2 className="text-3xl font-bold tracking-tight">Promptsuno</h2>
           <p className="mt-2 text-sm text-gray-400">Sign in to your workspace</p>
         </div>
+
+        <p className="text-center text-sm text-gray-400">New accounts and compilation are currently closed. Existing users can still sign in.</p>
 
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div className="space-y-4 rounded-md shadow-sm">
@@ -104,7 +82,6 @@ export default function LoginPage() {
           </div>
 
           {error && <p className="text-sm text-red-500 text-center">{error}</p>}
-          {message && <p className="text-sm text-green-500 text-center">{message}</p>}
 
           <div className="flex flex-col space-y-3">
             <button
@@ -114,14 +91,12 @@ export default function LoginPage() {
             >
               {loading ? 'Processing...' : 'Sign In'}
             </button>
-            <button
-              type="button"
-              onClick={handleSignUp}
-              disabled={loading || !hydrated}
+            <a
+              href={EARLY_ACCESS_URL}
               className="flex w-full justify-center rounded-md border border-gray-600 bg-transparent px-3 py-3 text-sm font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
             >
-              Create Account
-            </button>
+              Join early access
+            </a>
           </div>
         </form>
       </div>

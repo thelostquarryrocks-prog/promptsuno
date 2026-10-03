@@ -1,18 +1,21 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { EARLY_ACCESS_URL, SITE_URL } from '@/lib/site'
+import { robotsMetadata } from '@/lib/indexing'
 import styles from './page.module.css'
 
 export const metadata: Metadata = {
+  robots: robotsMetadata('/'),
   title: 'PromptSuno — Build better ideas for Suno',
   description:
-    'Explore musical ideas, build focused Suno style prompts, learn as you create, and diagnose what to improve with PromptSuno.',
-  alternates: { canonical: 'https://promptsuno.com' },
+    'Explore musical ideas with free Suno prompting lessons. Join early access for PromptSuno tools; signup and compilation are currently closed.',
+  alternates: { canonical: SITE_URL },
   openGraph: {
     title: 'PromptSuno — Build better ideas for Suno',
     description:
       'A creative companion for exploring musical direction, building prompts, and improving your next Suno song.',
     type: 'website',
-    url: 'https://promptsuno.com',
+    url: SITE_URL,
     siteName: 'PromptSuno',
   },
   twitter: {
@@ -122,8 +125,8 @@ export default function Home() {
           <a href="#sound-brain">Build</a>
           <a href="#studio-tools">Fix</a>
         </nav>
-        <Link className={styles.headerCta} href="/workspace">
-          Open app <Arrow />
+        <Link className={styles.headerCta} href="/login">
+          Sign in <Arrow />
         </Link>
       </header>
 
@@ -139,15 +142,15 @@ export default function Home() {
               working—without flattening your music into a generic formula.
             </p>
             <div className={styles.heroActions}>
-              <Link className={styles.primaryButton} href="/workspace">
-                Open Sound Brain <Arrow />
+              <Link className={styles.primaryButton} href={EARLY_ACCESS_URL}>
+                Join early access <Arrow />
               </Link>
               <Link className={styles.secondaryButton} href="/learn">
                 Start with Learn
               </Link>
             </div>
             <p className={styles.freeNote}>
-              <span aria-hidden="true">●</span> Genuinely useful for free. Go deeper only when you need to.
+              <span aria-hidden="true">●</span> LEARN is open. Signup and compilation are currently closed.
             </p>
           </div>
           <div className={styles.heroVisual}>
@@ -189,7 +192,7 @@ export default function Home() {
 
         <section className={styles.soundBrainSection} id="sound-brain" aria-labelledby="sound-brain-title">
           <div className={styles.soundBrainCopy}>
-            <p className={styles.kicker}>Flagship BUILD experience</p>
+            <p className={styles.kicker}>Sound Brain · Early access</p>
             <h2 id="sound-brain-title">Your sound is a space to explore.</h2>
             <p className={styles.sectionLead}>
               Sound Brain turns prompt building into musical discovery. Pull ideas toward the center,
@@ -200,7 +203,7 @@ export default function Home() {
               <li><span>02</span><div><strong>Keep intent structured</strong><p>Your chosen ideas stay distinct; an editable Styles prompt is the output, not the source of truth.</p></div></li>
               <li><span>03</span><div><strong>Stay in control</strong><p>Relationship guidance supports discovery. It never pretends to expose hidden Suno weights or guarantees.</p></div></li>
             </ul>
-            <Link className={styles.textLink} href="/workspace">Build with Sound Brain <Arrow /></Link>
+            <Link className={styles.textLink} href={EARLY_ACCESS_URL}>Join early access <Arrow /></Link>
           </div>
           <SoundBrainPreview />
         </section>
@@ -242,7 +245,7 @@ export default function Home() {
             <article className={styles.toolCard}>
               <div className={styles.toolTopline}>
                 <span>BUILD / LYRICS</span>
-                <span>In the studio</span>
+                <span>In development</span>
               </div>
               <div className={styles.lyricVisual} aria-hidden="true">
                 <span>[ VERSE ]</span>
@@ -256,7 +259,7 @@ export default function Home() {
             <article className={styles.toolCard}>
               <div className={styles.toolTopline}>
                 <span>FIX / DIAGNOSE</span>
-                <span>In the studio</span>
+                <span>In development</span>
               </div>
               <div className={styles.doctorVisual} aria-hidden="true">
                 <div><span>Observed</span><i /></div>
@@ -283,10 +286,10 @@ export default function Home() {
 
         <section className={styles.finalCta} aria-labelledby="final-title">
           <div className={styles.finalSignal} aria-hidden="true"><i /><i /><i /><i /><i /></div>
-          <p className={styles.kicker}>Ready when the idea is</p>
+          <p className={styles.kicker}>Be part of what comes next</p>
           <h2 id="final-title">Find the direction your next song needs.</h2>
-          <p>Start with the free core experience. Explore first, commit when something sounds like you.</p>
-          <Link className={styles.primaryButton} href="/workspace">Open Sound Brain <Arrow /></Link>
+          <p>Read the lessons today. Join early access to hear when the tools open.</p>
+          <Link className={styles.primaryButton} href={EARLY_ACCESS_URL}>Join early access <Arrow /></Link>
         </section>
       </main>
 
