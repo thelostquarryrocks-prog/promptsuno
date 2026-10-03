@@ -1,3 +1,4 @@
+import { EARLY_ACCESS_URL } from '@/lib/site'
 import { describe, expect, it } from "vitest"
 import { learnPages } from "@/content/learn/pages"
 
@@ -25,7 +26,8 @@ describe("LEARN content model", () => {
       expect(page.blocks.some((block) => block.type === "monkey-method")).toBe(true)
       expect(page.sources.length).toBeGreaterThan(0)
       expect(new Set(page.actions.map((action) => action.pillar))).toEqual(new Set(["build", "fix"]))
-      expect(page.actions.every((action) => action.href.startsWith("/workspace?"))).toBe(true)
+      expect(page.actions.find((action) => action.pillar === "fix")?.href).toBe(EARLY_ACCESS_URL)
+      expect(page.actions.find((action) => action.pillar === "build")?.href).toBe("/login")
       expect(page.related.every((slug) => allSlugs.has(slug))).toBe(true)
     }
   })

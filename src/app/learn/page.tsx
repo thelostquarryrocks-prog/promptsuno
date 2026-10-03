@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { siteUrl } from "@/lib/site"
 import Link from "next/link"
 import { MonkeyMethod } from "@/components/learn/MonkeyMethod"
 import styles from "@/components/learn/learn.module.css"
@@ -6,6 +7,7 @@ import { learnPages, rotatingLearnTips } from "@/content/learn/pages"
 
 export const metadata: Metadata = {
   title: "Learn music prompting",
+  alternates: { canonical: siteUrl("/learn") },
   description: "Five concise, evidence-aware guides for better style prompts, song structure, vocals, lyrics, and edits.",
 }
 
@@ -45,7 +47,7 @@ export default function LearnIndexPage() {
         <ol>
           <li><span>01</span><strong>Answer the real question</strong><p>Get a usable direction before background theory.</p></li>
           <li><span>02</span><strong>Make one testable move</strong><p>Examples and failure cases keep advice concrete.</p></li>
-          <li><span>03</span><strong>Carry it forward</strong><p>Continue into BUILD, FIX, or the next lesson.</p></li>
+          <li><span>03</span><strong>Carry it forward</strong><p>Keep learning, or join early access for the tools in development.</p></li>
         </ol>
       </section>
 

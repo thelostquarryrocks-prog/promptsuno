@@ -37,7 +37,7 @@ test('homepage stays readable across the required responsive matrix', async ({ p
     await page.setViewportSize({ width: viewport.width, height: viewport.height })
     await page.goto('/')
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-    await expect(page.getByRole('link', { name: /open sound brain/i }).first()).toBeVisible()
+    await expect(page.getByRole('link', { name: /join early access/i }).first()).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), viewport.name).toBe(true)
     await page.screenshot({ path: testInfo.outputPath(`homepage-${viewport.name}.png`), fullPage: true })
   }
@@ -55,7 +55,7 @@ test('homepage supports keyboard focus and reduced motion', async ({ page }, tes
   await page.keyboard.press('Enter')
   await expect(page).toHaveURL(/#main-content$/)
 
-  const primary = page.getByRole('link', { name: /open sound brain/i }).first()
+  const primary = page.getByRole('link', { name: /join early access/i }).first()
   await primary.focus()
   expect(await primary.evaluate(element => getComputedStyle(element).outlineStyle)).not.toBe('none')
 
