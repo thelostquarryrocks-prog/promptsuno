@@ -1,5 +1,202 @@
 # Compiler quota staging migration approval packet
 
+## Current Decision B execution receipt - 2026-10-01
+
+**DECISION B COMPLETE: YES.**
+**QUOTA POLICY ACTIVE AND VERIFIED: YES.**
+**SAFE TO ADVANCE TO PROVIDER/SPEND-CONTROL PREFLIGHT: YES.**
+**SAFE TO ENABLE PAID TRAFFIC: NO.**
+
+This receipt supersedes the Decision A stop state immediately below while
+preserving it as historical evidence. It records only the explicitly authorized
+private-pilot policy activation and quota acceptance on Supabase staging project
+`mtzrvekmsmpflbsqgpcc`. The application remains at source commit
+`c85d037d3b1aa0fb69050302611cedb6b8500109`; no runtime, migration, provider,
+Vercel, production, traffic, PR-promotion or merge change was made.
+
+### Activation receipt
+
+- Final read-only preflight reconfirmed exactly one remote migration-history row
+  for version `202609280001`; the expected policy, usage and zero-argument RPC
+  objects; `postgres` ownership; `SECURITY DEFINER`; empty `search_path`;
+  `lock_timeout=3s`; RLS with zero private-table policies; no authenticated
+  private schema/table access; authenticated-only RPC EXECUTE; and no private
+  PostgREST schema exposure.
+- The operator inserted exactly one singleton policy row, transactionally, with
+  `(singleton, burst_limit, burst_window_seconds, sustained_limit,
+  sustained_window_seconds) = (true, 3, 60, 20, 86400)`. The dashboard reported
+  success on 2026-10-01 before the first verified reservation at
+  `2026-10-01T17:54:57Z`. The table has no insertion timestamp, so this receipt
+  does not invent finer server-side timing.
+- Immediate and final privileged reads each found one policy row and one exact
+  tuple match. No overwrite, update, counter reset, truncate, timestamp change,
+  data deletion or rollback occurred.
+- Three authorized disposable staging accounts were used and are referred to
+  only as A, B and C. No credential, token, cookie, email address or account UUID
+  was printed, persisted in the repository or included in this receipt.
+
+### Direct authenticated RPC acceptance
+
+- **Burst exhaustion:** in one fresh UTC-aligned window, account A received
+  `allowed=true` three times, followed by `allowed=false` with integer
+  `retry_after_seconds=44`. The private aggregate remained burst 3 and sustained
+  4 after denial, proving the rejected call incremented neither counter.
+- **Burst rollover:** after the natural minute boundary, A was allowed again and
+  the aggregate became burst 1, sustained 5. No counter or timestamp was changed
+  administratively.
+- **Concurrent serialization:** in a fresh window at `2026-10-01T18:37:00Z`,
+  four concurrent calls for B produced exactly three allows and one denial, with
+  integer retry 59. All responses were HTTP 200 RPC results; there was no 5xx,
+  deadlock, timeout or unexpected shape. An earlier bounded batch that completed
+  during client-side observation uncertainty was reconciled rather than erased;
+  final B usage is therefore sustained 7, burst 3.
+- **Cross-account isolation:** immediately after B exhausted its burst, parallel
+  calls for A and C were both allowed. B remained exhausted; one account's lock
+  and counters did not block or consume another account's allowance.
+- **Sustained exhaustion:** C reached exactly 20 allowed reservations across
+  natural UTC minute boundaries. Its immediate 21st call at
+  `2026-10-01T18:44:24Z` returned `allowed=false` and integer
+  `retry_after_seconds=18936`. The final private read shortly afterward found C
+  still at sustained 20 and burst 2, with approximately 18,914 sustained seconds
+  versus 14 burst seconds remaining. This proves the denial was governed by the
+  later sustained-window expiry and did not increment either counter.
+- Final private aggregates contained exactly three usage rows, classified without
+  identifiers as A sustained 6, B sustained 7 and C sustained 20. The extra A
+  reservation is the successful isolation call. The result is consistent with
+  every accepted direct-RPC receipt and contains no unexplained increment.
+
+### Security, application and provider regression
+
+- Authenticated direct SELECT and UPDATE attempts against both private tables,
+  plus an authenticated direct INSERT to usage, were rejected at the PostgREST
+  boundary with `PGRST106`. Anonymous RPC execution was rejected with HTTP 401 /
+  SQLSTATE `42501`. Supplying a nonexistent `user_id` argument was rejected with
+  HTTP 404 / `PGRST202`; the public RPC remains zero-argument and caller-bound.
+- Static ACL/RLS verification remained consistent after activation:
+  authenticated has RPC EXECUTE but no private schema/table access, anon has no
+  RPC EXECUTE, both private tables retain RLS and zero policies, and the private
+  schema remains outside exposed API schemas.
+- A fresh authenticated same-origin `/api/generate` request returned application
+  JSON 503 with `Cache-Control: private, no-store` because `OPENAI_API_KEY`
+  remains absent. Private aggregates were unchanged by that request, confirming
+  provider absence is checked before reservation. Provider calls made: **0**.
+- A fresh authenticated `/workspace` fetch returned 200 with
+  `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate` and
+  `X-Robots-Tag: noindex, nofollow, noarchive`. The active service worker had
+  zero protected-route cache entries while a public homepage cache entry
+  remained. Exact-head accepted hostile-Origin 403, signed-out 401 and offline
+  stale-workspace denial remain authoritative and were not rerun because this
+  operation changed only database policy data and did not redeploy the app.
+- The transient in-page acceptance helper and its disposable session material
+  were explicitly removed after verification. No browser storage export, HAR,
+  trace, screenshot or raw network diagnostic containing session material was
+  created.
+
+### Final state and stop gate
+
+The singleton policy is active and verified at `(true, 3, 60, 20, 86400)`.
+Rollback was **not required**: no material quota or security defect was observed.
+The approved fail-closed mechanism remains deletion of only the singleton policy
+row after traffic is quiesced, but it was not invoked.
+
+Stop here. Decision B does not authorize adding a provider credential, changing
+provider/project spend controls, making paid calls, enabling pilot or public
+traffic, deploying or promoting an application, merging PR #4, or changing
+production. The next permissible action is a separately authorized
+provider/spend-control preflight. It is not traffic authorization.
+
+## Current Decision A execution receipt - 2026-10-01
+
+**DECISION A COMPLETE: YES.**
+**SAFE TO REQUEST DECISION B POLICY ACTIVATION: YES.**
+**DECISION B IS NOT AUTHORIZED OR ACTIVE.**
+
+This receipt supersedes older current-looking Decision A status in this packet.
+Historical receipts remain evidence of their own observations and limitations.
+The authorized schema-only migration was applied to Supabase staging project
+`mtzrvekmsmpflbsqgpcc` from source commit
+`c85d037d3b1aa0fb69050302611cedb6b8500109`. The exact migration was
+`supabase/migrations/202609280001_compiler_quota.sql`, version
+`202609280001`, SHA-256
+`bf5b5ca0a2a6b4519a53e786975e489a809d995d84601d78b95e9d502a3bbd19`,
+4,700 bytes with committed LF line endings. The existing `main` checkout was
+not used or changed.
+
+### Application receipt
+
+- Pinned Supabase CLI 2.118.0 operated from an isolated temporary runner linked
+  only to `mtzrvekmsmpflbsqgpcc`; the runner contained the one byte-verified
+  migration and no seed, custom role or Vault input.
+- Immediate read-only preflight confirmed database `postgres`, PostgreSQL 17.6,
+  effective operator `postgres` with the required privileges, no migration
+  history table, no quota schema/tables/RPC collision and no private-schema API
+  exposure. No Auth user records were read.
+- The pre-application `db push --linked --skip-vault --dry-run` listed exactly
+  `202609280001_compiler_quota.sql`, with no seeds, roles, Vault changes or
+  unrelated migration. The interactive application then reported that exact
+  migration applied successfully. No ambiguous transport failure occurred.
+- Post-application CLI history lists one local/remote version,
+  `202609280001`. A final `--skip-vault --dry-run` reports the remote database
+  up to date with empty migration, seed and role lists.
+- Remote history contains exactly one row for version `202609280001`, name
+  `compiler_quota`, with 13 registered statements matching the reviewed
+  migration statement heads. No unrelated migration was applied.
+
+### Post-application database verification
+
+- `compiler_quota_private.policy`, `compiler_quota_private.usage` and
+  zero-argument `public.reserve_compiler_attempt()` exist and are owned by
+  `postgres`. The private tables have their expected primary-key indexes.
+- The function is `SECURITY DEFINER`, has `search_path=""` and
+  `lock_timeout=3s`, uses `auth.uid()`, contains static schema-qualified SQL and
+  contains no dynamic `EXECUTE`.
+- RLS is enabled on both private tables and each has zero policies. PUBLIC,
+  `anon`, `authenticated` and `service_role` have no private schema/table access.
+  Only `authenticated` has RPC EXECUTE; PUBLIC and `anon` do not.
+- An anonymous direct function call was rejected with SQLSTATE `42501`. An
+  authenticated direct private-table read was rejected with SQLSTATE `42501`;
+  static ACL verification also confirmed no authenticated UPDATE privilege.
+- `compiler_quota_private` remains outside the exposed PostgREST schemas. A
+  schema reload completed, and linked type generation resolves
+  `reserve_compiler_attempt` with `Args: never` and `Returns: Json`.
+- Policy row count is 0 and usage row count is 0. No prompt, relationship-note,
+  IP, cookie or provider-result columns/data exist, and no account-history table
+  was created.
+- A direct RPC through the disposable account's real signed browser session
+  resolved the argument-free PostgREST binding and returned HTTP 500 with
+  SQLSTATE `55000`, `Compiler quota is not configured`. No JWT, cookie, account
+  identifier or credential was returned, logged or persisted. This is the
+  required missing-policy fail-closed result; no reservation or provider call
+  occurred.
+
+### Protected staging regression and stop state
+
+- The accepted deployment remains at the same application SHA. A fresh
+  authenticated workspace reload retained the session and returned HTTP 200
+  with `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate`.
+- With the service worker bypassed and the browser forced offline, `/workspace`
+  reached `ERR_INTERNET_DISCONNECTED`; protected workspace content was not
+  served from a browser cache. Normal online navigation recovered the
+  authenticated workspace.
+- A fresh authenticated same-origin `/api/generate` request returned application
+  JSON 503 with `Cache-Control: private, no-store` because `OPENAI_API_KEY`
+  remains absent. A credential-free request returned 401 at the protected
+  deployment boundary. The previously accepted exact-deployment hostile-Origin
+  application 403, signed-out application 401, secure host-only/Lax/path `/`
+  cookie attributes and PWA boundary remain authoritative; the database-only
+  migration did not change or redeploy those application paths.
+- Vercel environment inspection still shows only the two public Supabase
+  variables and no `OPENAI_API_KEY`. Paid/provider calls made during Decision A:
+  0. Compiler traffic remains quiesced.
+- The policy table is empty, so the deployed schema is already fail-closed. The
+  approved future emergency-disable mechanism remains deletion of the singleton
+  policy row after traffic is quiesced; no rollback, drop, truncate or counter
+  reset was executed.
+
+Stop here. Do not insert `(true, 3, 60, 20, 86400)`, add provider credentials,
+enable traffic, promote or merge PR #4, or perform any Decision B action without
+a separate explicit authorization.
+
 ## Current authentication gate decision - conditional design approval
 
 **AUTHENTICATION PREREQUISITES ARE CLOSED: NO.**
