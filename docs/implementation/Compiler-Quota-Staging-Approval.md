@@ -1,3 +1,4 @@
+Historical as of 3 October 2026. Current state: see README.md and docs/implementation/OPS-LOG.md.
 # Compiler quota staging migration approval packet
 
 ## Current Decision B execution receipt - 2026-10-01

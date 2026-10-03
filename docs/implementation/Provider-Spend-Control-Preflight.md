@@ -1,3 +1,4 @@
+Historical as of 3 October 2026. Current state: see README.md and docs/implementation/OPS-LOG.md.
 # Provider and aggregate spend-control preflight
 
 Date: 2026-10-01

@@ -1,3 +1,4 @@
+Historical as of 3 October 2026. Current state: see README.md and docs/implementation/OPS-LOG.md.
 # Atomic compiler usage quota
 
 Status: local SQL and full browser verification passed; **HOSTING BLOCKED**.
