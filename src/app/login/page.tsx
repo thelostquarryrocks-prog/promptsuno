@@ -47,7 +47,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-7 rounded-3xl border border-[#384047] bg-[#101619] p-6 shadow-[0_0_80px_#ff791212] sm:p-8">
         <div className="text-center">
           <Link href="/" aria-label="PromptSuno home" className="text-3xl font-extrabold tracking-tighter focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-300">Prompt<span className="text-[#ff702b]">Suno</span></Link>
-          <p className="mt-2 text-sm text-gray-400">Sign in to your workspace</p>
+          <h1 className="mt-2 text-sm font-normal text-gray-400">Sign in to your workspace</h1>
         </div>
 
         <p className="text-center text-sm text-gray-400">New accounts and compilation are currently closed. Existing users can still sign in.</p>
