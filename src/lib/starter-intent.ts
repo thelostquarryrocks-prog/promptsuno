@@ -66,16 +66,21 @@ export function hasStarterIntent(): boolean {
 // second tab. No auth APIs are awaited inside Supabase's synchronous callback.
 let watchingAuth = false
 let authRevision = 0
+let authEventSequence = 0
+let observedOwner: string | null | undefined
 let saveSequence = 0
 function watchAuth() {
   if (watchingAuth) return
   createClient().auth.onAuthStateChange((event, session) => {
+    const owner = session?.user.id ?? null
+    const ownerChanged = observedOwner !== undefined && observedOwner !== owner
+    authEventSequence += 1
+    if (event === 'SIGNED_OUT' || ownerChanged) authRevision += 1
+    observedOwner = owner
     if (event === 'SIGNED_OUT') {
-      authRevision += 1
       clearStarterIntent()
     }
     if (event === 'SIGNED_IN') {
-      authRevision += 1
       try {
         const draft = readDraft()
         if (draft?.ownerId && draft.ownerId !== session?.user.id) clearStarterIntent()
@@ -91,6 +96,7 @@ export async function saveStarterIntent({ text, examples = [] }: StarterInput, s
   try {
     watchAuth()
     const revision = authRevision
+    const eventSequence = authEventSequence
     const sequence = ++saveSequence
     // getSession only labels local draft ownership. It does not authorize the
     // workspace or compilation; the existing server guards still do that.
@@ -98,6 +104,11 @@ export async function saveStarterIntent({ text, examples = [] }: StarterInput, s
     if (error || signal?.aborted || revision !== authRevision || sequence !== saveSequence) return { ok: false, reason: 'unavailable' }
     const ownerId = data.session?.user.id ?? null
     if (ownerId !== null && !validOwner(ownerId)) return { ok: false, reason: 'unavailable' }
+    // Supabase can emit SIGNED_IN while initializing or reaffirming the same
+    // session. That is not an account switch. Still reject an in-flight stale
+    // snapshot when an observed auth event identifies a different owner.
+    if (eventSequence !== authEventSequence && observedOwner !== ownerId) return { ok: false, reason: 'unavailable' }
+    observedOwner = ownerId
     const draft: StarterDraft = { version: 1, text, examples: [...examples], createdAt: Date.now(), ownerId }
     window.sessionStorage.setItem(STARTER_INTENT_STORAGE_KEY, JSON.stringify(draft))
     return { ok: true }

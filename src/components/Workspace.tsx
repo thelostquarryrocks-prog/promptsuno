@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '../lib/supabase/client'
 import { parseCompilerOutput, type CompilerOutput, type DiscoveryAffinities, type SelectedNode } from '../lib/compiler-contract'
 import { clearStarterIntent, consumeStarterIntent, hasStarterIntent } from '../lib/starter-intent'
@@ -68,18 +69,21 @@ export default function Workspace({ discoveryNodes, affinities }: {
       workspaceOwner.current = owner
     })
     const revision = accountRevision.current
-    void supabase.auth.getUser().then(({ data, error }) => {
+    // The protected server route already verifies access. This local session
+    // snapshot only associates tab-local notes with their owner; do not add a
+    // browser /auth/v1/user fetch that could enter a cross-origin PWA cache.
+    void supabase.auth.getSession().then(({ data, error }) => {
       if (!mounted || revision !== accountRevision.current) return
-      if (error || !data.user) {
+      if (error || !data.session?.user) {
         if (hasStarterIntent()) setStarterStatus('Your starter is still saved in this tab. Refresh to try carrying it over again.')
         return
       }
-      if (workspaceOwner.current !== undefined && workspaceOwner.current !== data.user.id) {
+      if (workspaceOwner.current !== undefined && workspaceOwner.current !== data.session.user.id) {
         resetIntent()
         return
       }
-      workspaceOwner.current = data.user.id
-      const starter = consumeStarterIntent(data.user.id, intentWasEdited.current)
+      workspaceOwner.current = data.session.user.id
+      const starter = consumeStarterIntent(data.session.user.id, intentWasEdited.current)
       if (starter.status === 'ready') {
         intentWasEdited.current = true
         setRelationshipNotes(starter.notes)
@@ -189,15 +193,15 @@ export default function Workspace({ discoveryNodes, affinities }: {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#121212] text-white">
-      <header className="flex items-center justify-between border-b border-gray-800 bg-black px-4 py-4">
-        <h1 className="text-xl font-bold tracking-tight">PromptSuno</h1>
+    <div className="flex min-h-screen flex-col bg-[#080c0e] text-white">
+      <header className="flex items-center justify-between border-b border-[#303940] bg-[#090e11] px-5 py-4">
+        <h1 className="text-2xl font-extrabold tracking-tighter"><Link href="/" className={focusStyle}>Prompt<span className="text-[#ff702b]">Suno</span></Link></h1>
         <button onClick={handleSignOut} disabled={isGenerating} className={`min-h-11 px-2 text-sm text-gray-300 hover:text-white ${focusStyle}`}>Sign Out</button>
       </header>
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-4">
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-4 pt-7 sm:p-6">
         {starterStatus && <p role="status" className="text-sm text-gray-300">{starterStatus}</p>}
         <section aria-labelledby="sound-brain-heading" className="space-y-2">
-          <h2 id="sound-brain-heading" className="text-sm font-medium text-gray-300">Sound Brain Collector</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="sound-brain-heading" className="text-xl font-bold tracking-tight">Sound Brain Collector</h2><Link href="/learn/style-prompts" className={`text-sm text-amber-300 ${focusStyle}`}>Prompting guide →</Link></div>
           <SoundBrainCanvas discoveryNodes={discoveryNodes} affinities={affinities} selectedNodes={selectedNodes} onCollect={collectNode} onRemove={removeNode} disabled={isGenerating} />
           <p role="status" className="text-sm text-gray-300">{selectedNodes.length === 0 ? 'Collect nodes to begin.' : `${selectedNodes.length} ${selectedNodes.length === 1 ? 'node' : 'nodes'} selected.`}</p>
         </section>
@@ -213,7 +217,7 @@ export default function Workspace({ discoveryNodes, affinities }: {
             setCopyStatus('')
             setError('')
             if (result?.status === 'ready') setResult(null)
-          }} rows={3} className={`w-full rounded-md border border-gray-700 bg-[#1a1a1a] p-3 text-sm ${focusStyle}`} />
+          }} rows={3} className={`w-full rounded-xl border border-[#38444d] bg-[#0f171c] p-3 text-sm ${focusStyle}`} />
         </div>
 
         {result?.status === 'needs_clarification' && (
@@ -224,7 +228,7 @@ export default function Workspace({ discoveryNodes, affinities }: {
           </section>
         )}
 
-        <button ref={generateButton} onClick={handleGenerate} disabled={isGenerating || selectedNodes.length === 0} className={`min-h-12 rounded-md bg-yellow-300 px-4 py-3 text-sm font-semibold text-black hover:bg-yellow-200 disabled:opacity-50 ${focusStyle}`}>
+        <button ref={generateButton} onClick={handleGenerate} disabled={isGenerating || selectedNodes.length === 0} className={`min-h-12 rounded-full bg-linear-to-r from-[#ff6734] to-[#ffe043] px-4 py-3 text-sm font-bold text-black hover:brightness-110 disabled:opacity-50 ${focusStyle}`}>
           {isGenerating ? 'Crafting Prompt…' : result?.status === 'needs_clarification' ? 'Compile with clarification' : 'Generate Prompt'}
         </button>
         {isGenerating && <p role="status" className="text-sm text-gray-300">Compiling your selected nodes and notes…</p>}
@@ -234,7 +238,7 @@ export default function Workspace({ discoveryNodes, affinities }: {
           <section aria-labelledby="output-heading" className="space-y-3 pb-6">
             <h2 id="output-heading" className="text-sm font-medium text-gray-300">Suno Styles candidate</h2>
             <label htmlFor="styles-output" className="sr-only">Editable Styles prompt</label>
-            <textarea id="styles-output" value={output} onChange={event => { setOutput(event.target.value); setCopyStatus('') }} rows={5} className={`w-full rounded-md border border-gray-700 bg-[#1a1a1a] p-4 text-sm leading-relaxed ${focusStyle}`} />
+            <textarea id="styles-output" value={output} onChange={event => { setOutput(event.target.value); setCopyStatus('') }} rows={5} className={`w-full rounded-xl border border-[#38444d] bg-[#0f171c] p-4 text-sm leading-relaxed ${focusStyle}`} />
             <div className="flex flex-wrap gap-3">
               <button onClick={handleCopy} disabled={!output.trim()} className={`min-h-11 rounded-md border border-gray-600 px-4 text-sm disabled:opacity-50 ${focusStyle}`}>Copy to Clipboard</button>
               <button onClick={handleExport} disabled={!output.trim()} className={`min-h-11 rounded-md border border-gray-600 px-4 text-sm disabled:opacity-50 ${focusStyle}`}>Export Styles</button>

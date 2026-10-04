@@ -30,6 +30,40 @@ function seedDraft(draft: unknown = ownedDraft()) {
 }
 
 describe('tab-scoped starter handoff', () => {
+  it('accepts the initial SIGNED_IN emitted while reading an already-signed-in session', async () => {
+    const session = { user: { id: 'test-owner' } }
+    auth.getSession.mockImplementationOnce(async () => {
+      for (const listener of auth.listeners) listener('SIGNED_IN', session)
+      return { data: { session }, error: null }
+    })
+    expect(await saveStarterIntent({ text: 'Signed-in idea.' })).toEqual({ ok: true })
+    expect(consumeStarterIntent('test-owner', false)).toEqual({ status: 'ready', notes: 'Signed-in idea.' })
+  })
+
+  it('same-account SIGNED_IN reaffirmation does not invalidate a pending save', async () => {
+    const session = { user: { id: 'test-owner' } }
+    auth.getSession.mockResolvedValueOnce({ data: { session }, error: null })
+    await saveStarterIntent({ text: 'First idea.' })
+    auth.getSession.mockImplementationOnce(async () => {
+      for (const listener of auth.listeners) listener('SIGNED_IN', session)
+      return { data: { session }, error: null }
+    })
+    expect(await saveStarterIntent({ text: 'Newer signed-in idea.' })).toEqual({ ok: true })
+    expect(consumeStarterIntent('test-owner', false)).toEqual({ status: 'ready', notes: 'Newer signed-in idea.' })
+  })
+
+  it('an actual account switch still invalidates a pending save', async () => {
+    const session = { user: { id: 'test-owner' } }
+    auth.getSession.mockResolvedValueOnce({ data: { session }, error: null })
+    await saveStarterIntent({ text: 'First account idea.' })
+    auth.getSession.mockImplementationOnce(async () => {
+      for (const listener of auth.listeners) listener('SIGNED_IN', { user: { id: 'different-owner' } })
+      return { data: { session }, error: null }
+    })
+    expect(await saveStarterIntent({ text: 'Pending first account idea.' })).toEqual({ ok: false, reason: 'unavailable' })
+    expect(hasStarterIntent()).toBe(false)
+  })
+
   it('preserves exact authored text and example labels through explicit login, then consumes once', async () => {
     const text = '  Piano leads.\nKeep some space.  '
     expect(await saveStarterIntent({ text, examples: ['Cinematic', 'Warm vocals', 'Indie soul'] })).toEqual({ ok: true })

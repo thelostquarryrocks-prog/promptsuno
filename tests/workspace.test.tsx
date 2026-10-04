@@ -9,12 +9,15 @@ import { STARTER_INTENT_STORAGE_KEY } from '../src/lib/starter-intent'
 
 type LocalSession = { user: { id: string } } | null
 const auth = vi.hoisted(() => ({
+  getSession: vi.fn(),
   getUser: vi.fn(),
   signOut: vi.fn(),
   listeners: new Set<(event: string, session: LocalSession) => void>(),
 }))
+const webgl = vi.hoisted(() => ({ pending: null as Promise<void> | null }))
 vi.mock('../src/lib/supabase/client', () => ({
   createClient: () => ({ auth: {
+    getSession: auth.getSession,
     getUser: auth.getUser,
     signOut: auth.signOut,
     onAuthStateChange: (listener: (event: string, session: LocalSession) => void) => {
@@ -26,7 +29,10 @@ vi.mock('../src/lib/supabase/client', () => ({
 
 // Only replace WebGL and Next routing. Collection controls and Workspace are real.
 // Real drag/raycast and animation are exercised by the browser suite.
-vi.mock('@react-three/fiber', () => ({ Canvas: () => <div data-testid="webgl-preview" />, useFrame: vi.fn() }))
+vi.mock('@react-three/fiber', () => ({ Canvas: () => {
+  if (webgl.pending) throw webgl.pending
+  return <div data-testid="webgl-preview" />
+}, useFrame: vi.fn() }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }))
 vi.mock('next/dynamic', async () => {
   const { default: Canvas } = await import('../src/components/SoundBrainCanvas')
@@ -44,9 +50,11 @@ const ready = (selected: SelectedNode[], styles = 'Piano is foreground in aggres
 })
 
 beforeEach(() => {
+  webgl.pending = null
   sessionStorage.clear()
   auth.listeners.clear()
-  auth.getUser.mockReset().mockResolvedValue({ data: { user: { id: 'workspace-test-owner' } }, error: null })
+  auth.getSession.mockReset().mockResolvedValue({ data: { session: { user: { id: 'workspace-test-owner' } } }, error: null })
+  auth.getUser.mockReset()
   auth.signOut.mockReset().mockImplementation(async () => {
     for (const listener of auth.listeners) listener('SIGNED_OUT', null)
     return { error: null }
@@ -69,19 +77,20 @@ describe('starter handoff and account boundaries', () => {
     expect(sessionStorage.getItem(STARTER_INTENT_STORAGE_KEY)).toBeNull()
     expect(screen.getByRole('button', { name: 'Generate Prompt' })).toBeDisabled()
     expect(fetchMock).not.toHaveBeenCalled()
+    expect(auth.getUser).not.toHaveBeenCalled()
     view.unmount()
     renderWorkspace()
-    await waitFor(() => expect(auth.getUser).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(auth.getSession).toHaveBeenCalledTimes(2))
     expect(screen.getByLabelText('Relationship notes')).toHaveValue('')
   })
 
-  it('does not overwrite notes entered while account verification is pending', async () => {
+  it('does not overwrite notes entered while the local session read is pending', async () => {
     seedStarter()
     let verify!: (value: unknown) => void
-    auth.getUser.mockImplementationOnce(() => new Promise(resolve => { verify = resolve }))
+    auth.getSession.mockImplementationOnce(() => new Promise(resolve => { verify = resolve }))
     renderWorkspace()
     fireEvent.change(screen.getByLabelText('Relationship notes'), { target: { value: 'Keep this newer idea.' } })
-    await act(async () => verify({ data: { user: { id: 'workspace-test-owner' } }, error: null }))
+    await act(async () => verify({ data: { session: { user: { id: 'workspace-test-owner' } } }, error: null }))
     expect(screen.getByLabelText('Relationship notes')).toHaveValue('Keep this newer idea.')
     expect(sessionStorage.getItem(STARTER_INTENT_STORAGE_KEY)).toBeNull()
   })
@@ -94,20 +103,20 @@ describe('starter handoff and account boundaries', () => {
     expect(sessionStorage.getItem(STARTER_INTENT_STORAGE_KEY)).toBeNull()
   })
 
-  it('keeps the draft until verification succeeds and never consumes after unmount', async () => {
+  it('keeps the draft until the local session is ready and never consumes after unmount', async () => {
     seedStarter()
     let verify!: (value: unknown) => void
-    auth.getUser.mockImplementationOnce(() => new Promise(resolve => { verify = resolve }))
+    auth.getSession.mockImplementationOnce(() => new Promise(resolve => { verify = resolve }))
     const view = render(<Workspace discoveryNodes={nodes} affinities={affinities} />)
     expect(sessionStorage.getItem(STARTER_INTENT_STORAGE_KEY)).not.toBeNull()
     view.unmount()
-    await act(async () => verify({ data: { user: { id: 'workspace-test-owner' } }, error: null }))
+    await act(async () => verify({ data: { session: { user: { id: 'workspace-test-owner' } } }, error: null }))
     expect(sessionStorage.getItem(STARTER_INTENT_STORAGE_KEY)).not.toBeNull()
   })
 
-  it('keeps a pending starter on transient verification failure with retry guidance', async () => {
+  it('keeps a pending starter on transient session-read failure with retry guidance', async () => {
     seedStarter()
-    auth.getUser.mockResolvedValueOnce({ data: { user: null }, error: new Error('offline') })
+    auth.getSession.mockResolvedValueOnce({ data: { session: null }, error: new Error('offline') })
     renderWorkspace()
     await screen.findByText('Your starter is still saved in this tab. Refresh to try carrying it over again.')
     expect(sessionStorage.getItem(STARTER_INTENT_STORAGE_KEY)).not.toBeNull()
@@ -127,10 +136,10 @@ describe('starter handoff and account boundaries', () => {
   it('cannot apply an in-flight starter after sign-out', async () => {
     seedStarter()
     let verify!: (value: unknown) => void
-    auth.getUser.mockImplementationOnce(() => new Promise(resolve => { verify = resolve }))
+    auth.getSession.mockImplementationOnce(() => new Promise(resolve => { verify = resolve }))
     const user = renderWorkspace()
     await user.click(screen.getByRole('button', { name: 'Sign Out' }))
-    await act(async () => verify({ data: { user: { id: 'workspace-test-owner' } }, error: null }))
+    await act(async () => verify({ data: { session: { user: { id: 'workspace-test-owner' } } }, error: null }))
     expect(screen.getByLabelText('Relationship notes')).toHaveValue('')
     expect(sessionStorage.getItem(STARTER_INTENT_STORAGE_KEY)).toBeNull()
   })
@@ -161,6 +170,29 @@ async function collect(user: ReturnType<typeof userEvent.setup>, label: string) 
 }
 
 describe('canonical selection bridge', () => {
+  it('keeps open native collection controls mounted and usable while the scene suspends', async () => {
+    const user = userEvent.setup()
+    const onCollect = vi.fn()
+    const props = { discoveryNodes: nodes, affinities, selectedNodes: [], onCollect, onRemove: vi.fn() }
+    const view = render(<SoundBrainCanvas {...props} />)
+    const summary = screen.getByText('Choose nodes without dragging')
+    await user.click(summary)
+    const details = summary.closest('details')!
+    expect(details).toHaveAttribute('open')
+    let finish!: () => void
+    webgl.pending = new Promise<void>(resolve => { finish = resolve })
+    view.rerender(<SoundBrainCanvas {...props} />)
+    expect(screen.getByText('Loading Sound Brain scene…')).toBeVisible()
+    expect(summary).toBeVisible()
+    expect(details).toHaveAttribute('open')
+    await user.click(screen.getByRole('button', { name: 'Collect Piano' }))
+    expect(onCollect).toHaveBeenCalledWith(piano)
+    webgl.pending = null
+    await act(async () => finish())
+    expect(screen.queryByText('Loading Sound Brain scene…')).not.toBeInTheDocument()
+    expect(details).toHaveAttribute('open')
+  })
+
   it('synchronizes collect, duplicate prevention, remove, and recollect with Workspace', async () => {
     const user = renderWorkspace()
     expect(screen.getByRole('button', { name: 'Generate Prompt' })).toBeDisabled()

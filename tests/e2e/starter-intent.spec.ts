@@ -103,7 +103,7 @@ test('blocked session storage keeps the authored form visible instead of silentl
   await page.goto('/')
   await page.getByLabel('Describe the song you hear').fill(text)
   await page.getByRole('button', { name: 'Build Prompt', exact: true }).click()
-  await expect(page.getByRole('alert')).toContainText('Your browser couldn’t save this idea')
+  await expect(page.getByRole('region', { name: 'Start your Sound Brain idea' }).getByRole('alert')).toContainText('Your browser couldn’t save this idea')
   await expect(page.getByLabel('Describe the song you hear')).toHaveValue(text)
   await expect(page.getByRole('button', { name: 'Build Prompt', exact: true })).toBeEnabled()
   await expect(page).toHaveURL(/\/$/)

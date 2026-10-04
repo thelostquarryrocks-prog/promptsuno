@@ -31,9 +31,10 @@ export default function HomeHero() {
     }
     // Next may retain this page's state in its back/forward cache. Release the
     // submission lock on departure, and also when a native bfcache restores it.
-    window.addEventListener('pageshow', resetSubmission)
+    const restorePage = (event: PageTransitionEvent) => { if (event.persisted) resetSubmission() }
+    window.addEventListener('pageshow', restorePage)
     return () => {
-      window.removeEventListener('pageshow', resetSubmission)
+      window.removeEventListener('pageshow', restorePage)
       resetSubmission()
     }
   }, [])
@@ -98,7 +99,7 @@ export default function HomeHero() {
             <div className={styles.starterInput}>
               <span className={styles.pencil} aria-hidden="true">✎</span>
               <label className={styles.srOnly} htmlFor="song-idea">Describe the song you hear</label>
-              <textarea ref={input} id="song-idea" name="idea" rows={1} maxLength={MAX_STARTER_TEXT_LENGTH} placeholder="Describe the song you hear…" value={text} disabled={!hydrated || saving}
+              <textarea ref={input} id="song-idea" name="idea" rows={1} maxLength={MAX_STARTER_TEXT_LENGTH} placeholder="Describe your song…" value={text} disabled={!hydrated || saving}
                 aria-describedby="starter-note" onChange={event => { setText(event.target.value); setError('') }} />
               <BananaTip title="Start with the part you can hear"><p>Name a sound, a mood, and one detail that matters. “Warm vocals over a slow piano groove” is enough to begin. You can refine the relationships in Sound Brain.</p></BananaTip>
             </div>
