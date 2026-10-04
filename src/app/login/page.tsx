@@ -2,8 +2,10 @@
 
 import { useState, useSyncExternalStore } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { EARLY_ACCESS_URL } from '@/lib/site'
 import { createClient } from '../../lib/supabase/client'
+import { bindStarterIntentToUser } from '../../lib/starter-intent'
 
 const subscribeToHydration = () => () => {}
 const clientReady = () => true
@@ -25,7 +27,7 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
@@ -34,17 +36,18 @@ export default function LoginPage() {
       setError(error.message)
       setLoading(false)
     } else {
+      if (data.user) bindStarterIntentToUser(data.user.id)
       // If successful, push them to the protected workspace
       router.push('/workspace')
     }
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#121212] p-6 text-white">
-      <div className="w-full max-w-sm space-y-8">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#080c0e] p-6 text-white">
+      <div className="w-full max-w-sm space-y-7 rounded-3xl border border-[#384047] bg-[#101619] p-6 shadow-[0_0_80px_#ff791212] sm:p-8">
         <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight">Promptsuno</h2>
-          <p className="mt-2 text-sm text-gray-400">Sign in to your workspace</p>
+          <Link href="/" aria-label="PromptSuno home" className="text-3xl font-extrabold tracking-tighter focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-300">Prompt<span className="text-[#ff702b]">Suno</span></Link>
+          <h1 className="mt-2 text-sm font-normal text-gray-400">Sign in to your workspace</h1>
         </div>
 
         <p className="text-center text-sm text-gray-400">New accounts and compilation are currently closed. Existing users can still sign in.</p>
@@ -61,7 +64,7 @@ export default function LoginPage() {
                 disabled={!hydrated}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="relative block w-full rounded-t-md border-0 bg-[#1e1e1e] p-3 text-white ring-1 ring-inset ring-gray-700 placeholder:text-gray-500 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6"
+                className="relative block w-full rounded-xl border-0 bg-[#090e11] p-3 text-white ring-1 ring-inset ring-gray-700 placeholder:text-gray-500 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-amber-500 sm:text-sm sm:leading-6"
                 placeholder="Email address"
               />
             </div>
@@ -75,25 +78,25 @@ export default function LoginPage() {
                 disabled={!hydrated}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="relative block w-full rounded-b-md border-0 bg-[#1e1e1e] p-3 text-white ring-1 ring-inset ring-gray-700 placeholder:text-gray-500 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6"
+                className="relative block w-full rounded-xl border-0 bg-[#090e11] p-3 text-white ring-1 ring-inset ring-gray-700 placeholder:text-gray-500 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-amber-500 sm:text-sm sm:leading-6"
                 placeholder="Password"
               />
             </div>
           </div>
 
-          {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+          {error && <p className="text-sm text-red-300 text-center">{error}</p>}
 
           <div className="flex flex-col space-y-3">
             <button
               type="submit"
               disabled={loading || !hydrated}
-              className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-3 text-sm font-semibold text-white hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+              className="flex w-full justify-center rounded-full bg-linear-to-r from-[#ff5b37] to-[#ffdf45] px-3 py-3 text-sm font-bold text-black hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300 disabled:opacity-50"
             >
               {loading ? 'Processing...' : 'Sign In'}
             </button>
             <a
               href={EARLY_ACCESS_URL}
-              className="flex w-full justify-center rounded-md border border-gray-600 bg-transparent px-3 py-3 text-sm font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
+              className="flex w-full justify-center rounded-full border border-gray-600 bg-transparent px-3 py-3 text-sm font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
             >
               Join early access
             </a>

@@ -1,310 +1,85 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import { EARLY_ACCESS_URL, SITE_URL } from '@/lib/site'
 import { robotsMetadata } from '@/lib/indexing'
+import HomeHero from '@/components/home/HomeHero'
+import { BananaTip } from '@/components/home/BananaTip'
 import styles from './page.module.css'
 
 export const metadata: Metadata = {
   robots: robotsMetadata('/'),
   title: 'PromptSuno — Build better ideas for Suno',
-  description:
-    'Explore musical ideas with free Suno prompting lessons. Join early access for PromptSuno tools; signup and compilation are currently closed.',
+  description: 'Explore musical ideas with free Suno prompting lessons. Shape your sound in the existing Sound Brain workspace; signup and compilation are currently closed.',
   alternates: { canonical: SITE_URL },
   openGraph: {
     title: 'PromptSuno — Build better ideas for Suno',
-    description:
-      'A creative companion for exploring musical direction, building prompts, and improving your next Suno song.',
-    type: 'website',
-    url: SITE_URL,
-    siteName: 'PromptSuno',
+    description: 'Better prompts. Brighter music. Learn, build, and refine your musical direction.',
+    type: 'website', url: SITE_URL, siteName: 'PromptSuno',
   },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'PromptSuno — Build better ideas for Suno',
-    description:
-      'Explore musical direction, build focused prompts, and learn while you create.',
-  },
+  twitter: { card: 'summary_large_image', title: 'PromptSuno — Build better ideas for Suno', description: 'Learn, build, and refine your musical direction.' },
 }
 
-const soundNodes = [
-  { label: 'Dreamy', className: styles.nodeDreamy },
-  { label: 'Analog warmth', className: styles.nodeWarmth },
-  { label: 'Piano', className: styles.nodePiano },
-  { label: 'Slow build', className: styles.nodeBuild },
-  { label: 'Wide vocals', className: styles.nodeVocals },
-  { label: 'Tape texture', className: styles.nodeTexture },
-]
+function Arrow() { return <span aria-hidden="true">→</span> }
+function PillarIcon({ type }: { type: 'learn' | 'build' | 'fix' }) {
+  return <svg viewBox="0 0 36 36" fill="none" aria-hidden="true">
+    {type === 'learn' ? <path d="M18 29V9m0 0C14 5 8 5 4 7v20c5-2 10-1 14 2 4-3 9-4 14-2V7c-4-2-10-2-14 2Z" /> : type === 'build' ? <><path d="m18 3 13 7v16l-13 7L5 26V10l13-7Z" /><path d="m5 10 13 8 13-8M18 18v15" /></> : <path d="M22 4a9 9 0 0 0-10 12L3 27a4 4 0 0 0 6 6l11-11A9 9 0 0 0 32 12l-7 5-5-5 2-8Z" />}
+  </svg>
+}
 
 const pillars = [
-  {
-    index: '01',
-    name: 'LEARN',
-    title: 'Understand what to try next.',
-    body: 'Get direct, practical guidance that begins with the useful answer and reveals deeper context when you want it.',
-    link: '/learn',
-    linkLabel: 'Explore Learn',
-  },
-  {
-    index: '02',
-    name: 'BUILD',
-    title: 'Shape a musical direction.',
-    body: 'Explore ideas spatially, keep the combinations that feel right, and turn them into an editable Suno Styles prompt.',
-    link: '#sound-brain',
-    linkLabel: 'Meet Sound Brain',
-  },
-  {
-    index: '03',
-    name: 'FIX',
-    title: 'Improve without starting over.',
-    body: 'Diagnose one bounded problem, preserve your original work, and take the lowest-risk useful next step.',
-    link: '#studio-tools',
-    linkLabel: 'Preview Prompt Doctor',
-  },
+  { type: 'learn' as const, number: '01', name: 'LEARN', title: 'Master the art of prompting.', body: 'Practical guides and examples to help you make clearer musical decisions.', href: '/learn', cta: 'Start Learning', tip: 'Make one testable move', tipBody: 'Change one meaningful detail, then compare the results. Keep a note of what improved so your next prompt builds on what you heard.' },
+  { type: 'build' as const, number: '02', name: 'BUILD', title: 'Give your ideas a direction.', body: 'Collect sounds, explore relationships, and shape your idea in Sound Brain.', href: '#sound-brain', cta: 'Start Building', tip: 'Give every sound a role', tipBody: '“Piano leads while the cello stays behind it” gives a clearer relationship than a long list of instruments. Add that direction to your authored notes.' },
+  { type: 'fix' as const, number: '03', name: 'FIX', title: 'Improve and refine.', body: 'Find the smallest useful change. Keep what works, then test one focused edit.', href: '/learn/editing', cta: 'Explore Fixes', tip: 'Keep the part you love', tipBody: 'Before changing a song, name what should stay. Then isolate the section, sound, or lyric that needs attention. Our editing guide helps you choose a bounded next step.' },
 ]
-
-function SignalMark() {
-  return (
-    <span className={styles.signalMark} aria-hidden="true">
-      <span />
-      <span />
-      <span />
-      <span />
-    </span>
-  )
-}
-
-function Arrow() {
-  return <span aria-hidden="true">↗</span>
-}
-
-function SoundBrainPreview({ compact = false }: { compact?: boolean }) {
-  return (
-    <figure className={`${styles.brainPreview} ${compact ? styles.brainPreviewCompact : ''}`}>
-      <div className={styles.previewTopline}>
-        <span className={styles.previewLive}><i /> Sound Brain</span>
-        <span>6 ideas in orbit</span>
-      </div>
-      <div className={styles.brainStage} aria-hidden="true">
-        <div className={styles.orbit} />
-        <div className={styles.orbitSecondary} />
-        <div className={styles.brainCore}>
-          <span className={styles.coreRing} />
-          <span className={styles.coreGlow} />
-          <span className={styles.coreLabel}>your sound</span>
-        </div>
-        {soundNodes.map((node) => (
-          <span key={node.label} className={`${styles.soundNode} ${node.className}`}>
-            <i />{node.label}
-          </span>
-        ))}
-      </div>
-      <figcaption className={styles.visuallyHidden}>
-        A lightweight preview of musical ideas orbiting a central Sound Brain, including Dreamy,
-        Analog warmth, Piano, Slow build, Wide vocals, and Tape texture.
-      </figcaption>
-      <div className={styles.previewFooter} aria-hidden="true">
-        <span>Drag an idea toward the center</span>
-        <span className={styles.previewMeter}><i /><i /><i /><i /><i /></span>
-      </div>
-    </figure>
-  )
-}
 
 export default function Home() {
   return (
     <div className={styles.siteShell}>
       <a className={styles.skipLink} href="#main-content">Skip to content</a>
-
       <header className={styles.header}>
-        <Link className={styles.brand} href="/" aria-label="PromptSuno home">
-          <SignalMark />
-          <span>PromptSuno</span>
-        </Link>
+        <Link href="/" className={styles.brand} aria-label="PromptSuno home">Prompt<span>Suno</span></Link>
         <nav className={styles.nav} aria-label="Primary navigation">
-          <Link href="/learn">Learn</Link>
-          <a href="#sound-brain">Build</a>
-          <a href="#studio-tools">Fix</a>
+          <Link href="/" aria-current="page">Home</Link><Link href="/learn">Learn</Link><a href="#sound-brain">Build</a><Link href="/learn/editing">Fix</Link>
         </nav>
-        <Link className={styles.headerCta} href="/login">
-          Sign in <Arrow />
-        </Link>
+        <Link href="/login" className={styles.headerCta}>Sign in <Arrow /></Link>
       </header>
-
       <main id="main-content">
-        <section className={styles.hero} aria-labelledby="hero-title">
-          <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}><span /> A creative companion for Suno</p>
-            <h1 id="hero-title">
-              Turn musical instinct into <em>clear direction.</em>
-            </h1>
-            <p className={styles.heroBody}>
-              Explore ideas, shape focused style prompts, learn what matters, and improve what is not
-              working—without flattening your music into a generic formula.
-            </p>
-            <div className={styles.heroActions}>
-              <Link className={styles.primaryButton} href={EARLY_ACCESS_URL}>
-                Join early access <Arrow />
-              </Link>
-              <Link className={styles.secondaryButton} href="/learn">
-                Start with Learn
-              </Link>
-            </div>
-            <p className={styles.freeNote}>
-              <span aria-hidden="true">●</span> LEARN is open. Signup and compilation are currently closed.
-            </p>
-          </div>
-          <div className={styles.heroVisual}>
-            <div className={styles.heroHalo} aria-hidden="true" />
-            <SoundBrainPreview compact />
-            <p className={styles.visualNote}><span>BUILD / 01</span> Spatial prompt discovery</p>
-          </div>
-        </section>
-
-        <section className={styles.introStrip} aria-label="PromptSuno product summary">
-          <p>Less guessing. More intentional songs.</p>
-          <div aria-hidden="true" />
-          <p>Built for how creative work actually moves.</p>
-        </section>
-
-        <section className={styles.pillarsSection} id="learn" aria-labelledby="pillars-title">
-          <div className={styles.sectionHeading}>
-            <p className={styles.kicker}>One connected creative loop</p>
-            <h2 id="pillars-title">Learn it. Build it. Fix what matters.</h2>
-            <p>PromptSuno meets you at the job in front of you, then keeps the next step close.</p>
-          </div>
+        <HomeHero />
+        <section className={styles.pillarsSection} aria-labelledby="pillars-title">
+          <h2 id="pillars-title" className={styles.srOnly}>Learn it. Build it. Fix what matters.</h2>
           <div className={styles.pillarGrid}>
-            {pillars.map((pillar) => (
-              <article className={styles.pillarCard} key={pillar.name}>
-                <div className={styles.pillarMeta}>
-                  <span>{pillar.index}</span>
-                  <strong>{pillar.name}</strong>
-                </div>
-                <div className={styles.pillarGlyph} data-pillar={pillar.name} aria-hidden="true">
-                  <i /><i /><i />
-                </div>
-                <h3>{pillar.title}</h3>
-                <p>{pillar.body}</p>
-                <Link href={pillar.link}>{pillar.linkLabel} <Arrow /></Link>
-              </article>
-            ))}
+            {pillars.map(pillar => <article key={pillar.type} className={`${styles.pillarCard} ${styles[pillar.type]}`}>
+              <Image src={`/images/design/${pillar.type}-equipment.webp`} alt="" fill sizes="(max-width: 700px) 100vw, 33vw" className={styles.cardImage} />
+              <div className={styles.cardShade} />
+              <div className={styles.cardContent}>
+                <span className={styles.pillarNumber}>{pillar.number}</span>
+                <span className={styles.pillarIcon}><PillarIcon type={pillar.type} /></span>
+                <h3>{pillar.name}</h3><h4>{pillar.title}</h4><p>{pillar.body}</p>
+                <Link href={pillar.href} className={styles.cardLink}>{pillar.cta} <Arrow /></Link>
+              </div>
+              <div className={styles.cardTip}><BananaTip title={pillar.tip}><p>{pillar.tipBody}</p>{pillar.type === 'fix' ? <Link href="/learn/editing">Read the editing guide →</Link> : null}</BananaTip></div>
+            </article>)}
           </div>
         </section>
-
-        <section className={styles.soundBrainSection} id="sound-brain" aria-labelledby="sound-brain-title">
-          <div className={styles.soundBrainCopy}>
-            <p className={styles.kicker}>Sound Brain · Early access</p>
-            <h2 id="sound-brain-title">Your sound is a space to explore.</h2>
-            <p className={styles.sectionLead}>
-              Sound Brain turns prompt building into musical discovery. Pull ideas toward the center,
-              notice useful neighbors, and keep the strange combinations that make the song yours.
-            </p>
-            <ul className={styles.featureList}>
-              <li><span>01</span><div><strong>Discover without a settings wall</strong><p>Move through genres, moods, instruments, vocals, rhythm, texture, and production naturally.</p></div></li>
-              <li><span>02</span><div><strong>Keep intent structured</strong><p>Your chosen ideas stay distinct; an editable Styles prompt is the output, not the source of truth.</p></div></li>
-              <li><span>03</span><div><strong>Stay in control</strong><p>Relationship guidance supports discovery. It never pretends to expose hidden Suno weights or guarantees.</p></div></li>
-            </ul>
-            <Link className={styles.textLink} href={EARLY_ACCESS_URL}>Join early access <Arrow /></Link>
-          </div>
-          <SoundBrainPreview />
-        </section>
-
         <section className={styles.methodsSection} id="monkey-methods" aria-labelledby="methods-title">
-          <div className={styles.methodCard}>
-            <div className={styles.methodBadge} aria-hidden="true">
-              <span className={styles.methodCurve} />
-              <span className={styles.methodDot} />
-            </div>
-            <div className={styles.methodContent}>
-              <p className={styles.kicker}>Monkey Method · Contextual learning</p>
-              <h2 id="methods-title">A useful nudge, exactly when it helps.</h2>
-              <p>
-                No forced tour. No encyclopedia detour. Monkey Methods offer short, optional guidance
-                beside the creative decision you are already making.
-              </p>
-              <div className={styles.methodExample}>
-                <span>TRY THIS</span>
-                <p>Give each idea a role. “Piano in front, synths far away” says more than adding extra adjectives.</p>
-              </div>
-            </div>
-          </div>
-          <div className={styles.methodAside}>
-            <span aria-hidden="true">⌁</span>
-            <p>Simple first.</p>
-            <p>Deeper when useful.</p>
-            <p>Evidence without the lecture.</p>
-          </div>
+          <BananaTip title="Small banana. Big tips." large><p>Look for the bananas as you explore. Tap one for a short hint, a practical technique, or a creative nudge. Take what helps, then get back to your music.</p><p>Try it in <Link href="/learn/style-prompts">the style prompts lesson</Link>.</p></BananaTip>
+          <div className={styles.methodCopy}><p className={styles.kicker}>Small banana. Big tips.</p><h2 id="methods-title">Monkey <span>Methods</span></h2><h3>Look for the bananas</h3><p>Tap a banana for a helpful hint, technique, or creative nudge.</p></div>
+          <div className={styles.methodWatermark} aria-hidden="true"><Image src="/images/design/methods-monkey-watermark.webp" alt="" width={358} height={330} sizes="230px" /></div>
         </section>
-
-        <section className={styles.toolsSection} id="studio-tools" aria-labelledby="tools-title">
-          <div className={styles.sectionHeading}>
-            <p className={styles.kicker}>One song, more than one tool</p>
-            <h2 id="tools-title">Keep creating past the first prompt.</h2>
-            <p>PromptSuno is growing into a connected studio for musical direction, lyrics, and diagnosis.</p>
-          </div>
-          <div className={styles.toolGrid}>
-            <article className={styles.toolCard}>
-              <div className={styles.toolTopline}>
-                <span>BUILD / LYRICS</span>
-                <span>In development</span>
-              </div>
-              <div className={styles.lyricVisual} aria-hidden="true">
-                <span>[ VERSE ]</span>
-                <i /><i /><i /><i />
-                <span>[ CHORUS ]</span>
-                <i /><i className={styles.shortLine} />
-              </div>
-              <h3>Lyrics Studio</h3>
-              <p>Start fresh, bring in your Sound Brain direction, or shape an existing style prompt—without turning songwriting into another chat box.</p>
-            </article>
-            <article className={styles.toolCard}>
-              <div className={styles.toolTopline}>
-                <span>FIX / DIAGNOSE</span>
-                <span>In development</span>
-              </div>
-              <div className={styles.doctorVisual} aria-hidden="true">
-                <div><span>Observed</span><i /></div>
-                <div><span>Possible cause</span><i /></div>
-                <div><span>Next test</span><i /></div>
-              </div>
-              <h3>Prompt Doctor</h3>
-              <p>Focus on the symptom, preserve what already works, and test the smallest useful change before rewriting everything.</p>
-            </article>
-          </div>
-        </section>
-
-        <section className={styles.trustSection} aria-labelledby="trust-title">
-          <div>
-            <p className={styles.kicker}>Useful guidance, honestly framed</p>
-            <h2 id="trust-title">Built around evidence—not prompt folklore.</h2>
-          </div>
-          <div className={styles.trustPoints}>
-            <p><span>01</span>Documented behavior stays distinct from experiments and community observations.</p>
-            <p><span>02</span>Uncertainty is made clear. PromptSuno does not claim access to hidden Suno mechanics.</p>
-            <p><span>03</span>Your private prompts, lyrics, and project context do not belong in public URLs.</p>
-          </div>
-        </section>
-
         <section className={styles.finalCta} aria-labelledby="final-title">
-          <div className={styles.finalSignal} aria-hidden="true"><i /><i /><i /><i /><i /></div>
-          <p className={styles.kicker}>Be part of what comes next</p>
-          <h2 id="final-title">Find the direction your next song needs.</h2>
-          <p>Read the lessons today. Join early access to hear when the tools open.</p>
-          <Link className={styles.primaryButton} href={EARLY_ACCESS_URL}>Join early access <Arrow /></Link>
+          <p className={styles.kicker}>Ready to create?</p><h2 id="final-title">Your Next Song Starts <span>Here</span></h2>
+          <a href="#sound-brain" className={styles.primaryButton}>Build a Prompt <Arrow /></a>
         </section>
       </main>
-
       <footer className={styles.footer}>
-        <div className={styles.footerBrand}>
-          <Link className={styles.brand} href="/" aria-label="PromptSuno home"><SignalMark /><span>PromptSuno</span></Link>
-          <p>A creative companion for people making music with Suno.</p>
+        <div className={styles.footerGrid}>
+          <div className={styles.footerBrand}><Link href="/" className={styles.brand}>Prompt<span>Suno</span></Link><p>Better prompts. Brighter music.</p><p className={styles.independent}>An independent creative companion for Suno.</p></div>
+          <nav aria-label="Product"><h2>Product</h2><Link href="/">Home</Link><Link href="/learn">Learn</Link><a href="#sound-brain">Build</a><Link href="/learn/editing">Fix guides</Link></nav>
+          <nav aria-label="Learning resources"><h2>Resources</h2><Link href="/learn/style-prompts">Style prompts</Link><Link href="/learn/song-structure">Song structure</Link><Link href="/learn/vocals">Vocals</Link><Link href="/learn/lyrics">Lyrics</Link></nav>
+          <div className={styles.footerAccess}><h2>Stay in the loop</h2><p>Get early access news and help shape what comes next.</p><a href={EARLY_ACCESS_URL} className={styles.footerAccessLink}>Join early access <Arrow /></a><p className={styles.closedNote}>Signup and compilation are currently closed.</p></div>
         </div>
-        <nav aria-label="Footer navigation">
-          <Link href="/learn">Learn</Link>
-          <a href="#sound-brain">Sound Brain</a>
-          <a href="#studio-tools">Studio tools</a>
-          <Link href="/login">Sign in</Link>
-        </nav>
-        <p className={styles.copyright}>© {new Date().getFullYear()} PromptSuno</p>
+        <div className={styles.footerBottom}><p>© 2026 PromptSuno. All rights reserved.</p><p>For creators, by creators.</p></div>
       </footer>
     </div>
   )

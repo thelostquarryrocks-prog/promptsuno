@@ -3,7 +3,7 @@
 import { Canvas, useFrame } from '@react-three/fiber'
 /* eslint-disable react-hooks/immutability -- R3F owns mutable animation refs; useFrame updates them without React renders. */
 import { Sphere, MeshDistortMaterial, Text } from '@react-three/drei'
-import { useRef, useMemo, useState, useEffect, type ComponentRef } from 'react'
+import { Suspense, useRef, useMemo, useState, useEffect, type ComponentRef } from 'react'
 import * as THREE from 'three'
 import type { DiscoveryAffinities, SelectedNode } from '../lib/compiler-contract'
 
@@ -357,6 +357,9 @@ export default function SoundBrainCanvas({ discoveryNodes, affinities, selectedN
   return (
     <div className="w-full flex flex-col space-y-4">
       <div className="w-full h-[360px] sm:h-[500px] rounded-xl overflow-hidden bg-black border border-gray-800 shadow-2xl relative">
+        {/* Renderer/font suspension must not hide the native collection controls
+            or interrupt a pointer interaction already in progress below. */}
+        <Suspense fallback={<p role="status" className="p-6 text-sm text-gray-300">Loading Sound Brain scene…</p>}>
         <Canvas dpr={[1, 1.5]} aria-label="Drag musical nodes to the central Sound Brain" style={{ touchAction: 'none' }} camera={{ position: [0, 0, 10], fov: 45 }}>
           <ambientLight intensity={0.2} />
           <pointLight position={[0, 0, 0]} intensity={2} color="#8a2be2" />
@@ -366,6 +369,7 @@ export default function SoundBrainCanvas({ discoveryNodes, affinities, selectedN
 
           <BrainOrb collectedTags={selectedNodes} gulpTrigger={gulpTrigger} />
         </Canvas>
+        </Suspense>
         <div className="absolute top-4 left-4 text-[10px] font-mono text-gray-500 pointer-events-none tracking-widest bg-black/50 px-2 py-1 rounded">
           DRAG TO CENTER ORB
         </div>

@@ -56,5 +56,11 @@ test("lesson navigation and contextual coaching work without horizontal overflow
       path: `.verification/learn-review-${testInfo.project.name}-topic.png`,
       fullPage: true,
     })
+    if (testInfo.project.name === "desktop-chromium") {
+      await page.setViewportSize({ width: 320, height: 740 })
+      await page.goto("/learn/lyrics", { waitUntil: "networkidle" })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
+      await page.screenshot({ path: ".verification/learn-review-narrow-lyrics.png", fullPage: true })
+    }
   }
 })

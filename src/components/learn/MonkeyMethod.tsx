@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react"
 import type { MonkeyMethod as MonkeyMethodData } from "@/content/learn/types"
-import { MonkeyMark } from "./MonkeyMark"
+import { BananaIcon } from "@/components/home/BananaIcon"
 import styles from "./learn.module.css"
 
 type MonkeyMethodProps = {
@@ -118,7 +118,6 @@ export function MonkeyMethod({ method }: MonkeyMethodProps) {
   return (
     <aside className={styles.monkeyMethod} aria-labelledby={`${panelId}-title`}>
       <div className={styles.monkeyTopline}>
-        <MonkeyMark className={styles.monkeyMark} />
         <div className={styles.monkeyHeading}>
           <span className={styles.monkeyLabel}>Monkey Method</span>
           <h2 id={`${panelId}-title`}>{method.title}</h2>
@@ -133,7 +132,8 @@ export function MonkeyMethod({ method }: MonkeyMethodProps) {
           aria-label={`${isOpen ? "Close" : "Open"} Monkey Method: ${method.title}`}
           onClick={openMethod}
         >
-          {isOpen ? "Close" : hasOpened ? "Open again" : "Show method"}
+          <BananaIcon className={styles.monkeyMark} />
+          <span className={styles.srOnly}>{isOpen ? "Close" : hasOpened ? "Open again" : "Show method"}</span>
         </button>
       </div>
       <div id={panelId} hidden={!isOpen} className={styles.monkeyPanel}>

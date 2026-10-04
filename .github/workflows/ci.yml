@@ -123,7 +123,7 @@ jobs:
       - name: Browser tests
         id: e2e
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' && steps.scripts.outputs.test_e2e == 'true' }}
-        run: npm run test:e2e
+        run: LEARN_CAPTURE=1 npm run test:e2e
       - name: Preserve browser failure evidence
         if: ${{ !cancelled() && steps.e2e.outcome == 'failure' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -132,4 +132,16 @@ jobs:
           path: |
             playwright-report/
             test-results/
+          retention-days: 7
+
+      - name: Preserve responsive design review screenshots
+        if: ${{ !cancelled() && steps.e2e.outcome != 'skipped' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: responsive-design-review
+          include-hidden-files: true
+          path: |
+            test-results/**/homepage-*.png
+            .verification/learn-review-*.png
+          if-no-files-found: warn
           retention-days: 7
