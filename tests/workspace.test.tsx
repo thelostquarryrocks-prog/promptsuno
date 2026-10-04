@@ -5,6 +5,24 @@ import Workspace from '../src/components/Workspace'
 import SoundBrainCanvas from '../src/components/SoundBrainCanvas'
 import { getSoundBrainDiscovery } from '../src/lib/sound-brain-catalog'
 import type { CompilerInput, SelectedNode } from '../src/lib/compiler-contract'
+import { STARTER_INTENT_STORAGE_KEY } from '../src/lib/starter-intent'
+
+type LocalSession = { user: { id: string } } | null
+const auth = vi.hoisted(() => ({
+  getUser: vi.fn(),
+  signOut: vi.fn(),
+  listeners: new Set<(event: string, session: LocalSession) => void>(),
+}))
+vi.mock('../src/lib/supabase/client', () => ({
+  createClient: () => ({ auth: {
+    getUser: auth.getUser,
+    signOut: auth.signOut,
+    onAuthStateChange: (listener: (event: string, session: LocalSession) => void) => {
+      auth.listeners.add(listener)
+      return { data: { subscription: { unsubscribe: () => auth.listeners.delete(listener) } } }
+    },
+  } }),
+}))
 
 // Only replace WebGL and Next routing. Collection controls and Workspace are real.
 // Real drag/raycast and animation are exercised by the browser suite.
@@ -26,8 +44,110 @@ const ready = (selected: SelectedNode[], styles = 'Piano is foreground in aggres
 })
 
 beforeEach(() => {
+  sessionStorage.clear()
+  auth.listeners.clear()
+  auth.getUser.mockReset().mockResolvedValue({ data: { user: { id: 'workspace-test-owner' } }, error: null })
+  auth.signOut.mockReset().mockImplementation(async () => {
+    for (const listener of auth.listeners) listener('SIGNED_OUT', null)
+    return { error: null }
+  })
   fetchMock.mockReset()
   vi.stubGlobal('fetch', fetchMock)
+})
+
+function seedStarter(ownerId: string | null = 'workspace-test-owner') {
+  sessionStorage.setItem(STARTER_INTENT_STORAGE_KEY, JSON.stringify({
+    version: 1, text: '  Piano leads.\nLeave space.  ', examples: ['Cinematic', 'Warm vocals'], createdAt: Date.now(), ownerId,
+  }))
+}
+
+describe('starter handoff and account boundaries', () => {
+  it('consumes starter notes once without selecting nodes or calling the compiler', async () => {
+    seedStarter()
+    const view = render(<Workspace discoveryNodes={nodes} affinities={affinities} />)
+    await waitFor(() => expect(screen.getByLabelText('Relationship notes')).toHaveValue('  Piano leads.\nLeave space.  \n\nExample directions: Cinematic, Warm vocals'))
+    expect(sessionStorage.getItem(STARTER_INTENT_STORAGE_KEY)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Generate Prompt' })).toBeDisabled()
+    expect(fetchMock).not.toHaveBeenCalled()
+    view.unmount()
+    renderWorkspace()
+    await waitFor(() => expect(auth.getUser).toHaveBeenCalledTimes(2))
+    expect(screen.getByLabelText('Relationship notes')).toHaveValue('')
+  })
+
+  it('does not overwrite notes entered while account verification is pending', async () => {
+    seedStarter()
+    let verify!: (value: unknown) => void
+    auth.getUser.mockImplementationOnce(() => new Promise(resolve => { verify = resolve }))
+    renderWorkspace()
+    fireEvent.change(screen.getByLabelText('Relationship notes'), { target: { value: 'Keep this newer idea.' } })
+    await act(async () => verify({ data: { user: { id: 'workspace-test-owner' } }, error: null }))
+    expect(screen.getByLabelText('Relationship notes')).toHaveValue('Keep this newer idea.')
+    expect(sessionStorage.getItem(STARTER_INTENT_STORAGE_KEY)).toBeNull()
+  })
+
+  it('does not apply an abandoned anonymous draft or another account’s notes', async () => {
+    seedStarter('different-test-owner')
+    renderWorkspace()
+    await screen.findByText('Your current workspace was kept. The pending starter was not applied.')
+    expect(screen.getByLabelText('Relationship notes')).toHaveValue('')
+    expect(sessionStorage.getItem(STARTER_INTENT_STORAGE_KEY)).toBeNull()
+  })
+
+  it('keeps the draft until verification succeeds and never consumes after unmount', async () => {
+    seedStarter()
+    let verify!: (value: unknown) => void
+    auth.getUser.mockImplementationOnce(() => new Promise(resolve => { verify = resolve }))
+    const view = render(<Workspace discoveryNodes={nodes} affinities={affinities} />)
+    expect(sessionStorage.getItem(STARTER_INTENT_STORAGE_KEY)).not.toBeNull()
+    view.unmount()
+    await act(async () => verify({ data: { user: { id: 'workspace-test-owner' } }, error: null }))
+    expect(sessionStorage.getItem(STARTER_INTENT_STORAGE_KEY)).not.toBeNull()
+  })
+
+  it('keeps a pending starter on transient verification failure with retry guidance', async () => {
+    seedStarter()
+    auth.getUser.mockResolvedValueOnce({ data: { user: null }, error: new Error('offline') })
+    renderWorkspace()
+    await screen.findByText('Your starter is still saved in this tab. Refresh to try carrying it over again.')
+    expect(sessionStorage.getItem(STARTER_INTENT_STORAGE_KEY)).not.toBeNull()
+    expect(screen.getByLabelText('Relationship notes')).toHaveValue('')
+  })
+
+  it.each(['SIGNED_OUT', 'SIGNED_IN'])('clears imported notes and pending drafts on %s account boundaries', async event => {
+    seedStarter()
+    renderWorkspace()
+    await screen.findByText(/Your starter is in Relationship notes/)
+    seedStarter()
+    act(() => { for (const listener of auth.listeners) listener(event, event === 'SIGNED_OUT' ? null : { user: { id: 'different-test-owner' } }) })
+    expect(screen.getByLabelText('Relationship notes')).toHaveValue('')
+    expect(sessionStorage.getItem(STARTER_INTENT_STORAGE_KEY)).toBeNull()
+  })
+
+  it('cannot apply an in-flight starter after sign-out', async () => {
+    seedStarter()
+    let verify!: (value: unknown) => void
+    auth.getUser.mockImplementationOnce(() => new Promise(resolve => { verify = resolve }))
+    const user = renderWorkspace()
+    await user.click(screen.getByRole('button', { name: 'Sign Out' }))
+    await act(async () => verify({ data: { user: { id: 'workspace-test-owner' } }, error: null }))
+    expect(screen.getByLabelText('Relationship notes')).toHaveValue('')
+    expect(sessionStorage.getItem(STARTER_INTENT_STORAGE_KEY)).toBeNull()
+  })
+
+  it('cannot restore an old account’s output when an in-flight compile finishes after sign-out', async () => {
+    const user = renderWorkspace()
+    await collect(user, 'Piano')
+    fireEvent.change(screen.getByLabelText('Relationship notes'), { target: { value: 'Private older idea.' } })
+    let finish!: (response: Response) => void
+    fetchMock.mockImplementationOnce(() => new Promise<Response>(resolve => { finish = resolve }))
+    await user.click(screen.getByRole('button', { name: 'Generate Prompt' }))
+    act(() => { for (const listener of auth.listeners) listener('SIGNED_OUT', null) })
+    await act(async () => finish(Response.json(ready([piano], 'Private older output.'))))
+    expect(screen.getByLabelText('Relationship notes')).toHaveValue('')
+    expect(screen.queryByLabelText('Editable Styles prompt')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Generate Prompt' })).toBeDisabled()
+  })
 })
 
 function renderWorkspace(discoveryNodes = nodes) {
@@ -89,6 +209,20 @@ describe('canonical selection bridge', () => {
 })
 
 describe('compile states, authored notes, and candidate actions', () => {
+  it('explains keyless compiler unavailability without losing intent or exposing provider details', async () => {
+    const user = renderWorkspace()
+    await collect(user, 'Piano')
+    fireEvent.change(screen.getByLabelText('Relationship notes'), { target: { value: 'Piano leads.' } })
+    fetchMock.mockResolvedValueOnce(Response.json({ error: 'Private provider configuration' }, { status: 503 }))
+    await user.click(screen.getByRole('button', { name: 'Generate Prompt' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Prompt compilation is currently unavailable. Your nodes and notes are still here.')
+    expect(screen.getByLabelText('Relationship notes')).toHaveValue('Piano leads.')
+    expect(screen.getByRole('button', { name: 'Remove Piano' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Generate Prompt' })).toBeEnabled()
+    expect(screen.queryByText('Private provider configuration')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Editable Styles prompt')).not.toBeInTheDocument()
+  })
+
   it.each(['60', 'invalid'])('shows bounded quota retry guidance for Retry-After %s while retaining intent', async retryAfter => {
     const user = renderWorkspace()
     await collect(user, 'Piano')

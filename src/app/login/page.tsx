@@ -4,6 +4,7 @@ import { useState, useSyncExternalStore } from 'react'
 import { useRouter } from 'next/navigation'
 import { EARLY_ACCESS_URL } from '@/lib/site'
 import { createClient } from '../../lib/supabase/client'
+import { bindStarterIntentToUser } from '../../lib/starter-intent'
 
 const subscribeToHydration = () => () => {}
 const clientReady = () => true
@@ -25,7 +26,7 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
@@ -34,6 +35,7 @@ export default function LoginPage() {
       setError(error.message)
       setLoading(false)
     } else {
+      if (data.user) bindStarterIntentToUser(data.user.id)
       // If successful, push them to the protected workspace
       router.push('/workspace')
     }

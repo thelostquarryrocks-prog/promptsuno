@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../lib/supabase/client'
 import { parseCompilerOutput, type CompilerOutput, type DiscoveryAffinities, type SelectedNode } from '../lib/compiler-contract'
+import { clearStarterIntent, consumeStarterIntent, hasStarterIntent } from '../lib/starter-intent'
 
 const SoundBrainCanvas = dynamic(() => import('./SoundBrainCanvas'), {
   ssr: false,
@@ -24,6 +25,10 @@ export default function Workspace({ discoveryNodes, affinities }: {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState('')
   const [copyStatus, setCopyStatus] = useState('')
+  const [starterStatus, setStarterStatus] = useState('')
+  const intentWasEdited = useRef(false)
+  const workspaceOwner = useRef<string | null | undefined>(undefined)
+  const accountRevision = useRef(0)
   const requestInFlight = useRef(false)
   const generateButton = useRef<HTMLButtonElement>(null)
   const restoreGenerateFocus = useRef(false)
@@ -44,8 +49,55 @@ export default function Workspace({ discoveryNodes, affinities }: {
     setCopyStatus('')
   }, [])
 
+  useEffect(() => {
+    let mounted = true
+    const supabase = createClient()
+    const resetIntent = () => {
+      accountRevision.current += 1
+      intentWasEdited.current = true
+      clearStarterIntent()
+      setRelationshipNotes('')
+      setSelectedNodes([])
+      setStarterStatus('')
+      clearCandidate()
+    }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return
+      const owner = session?.user.id ?? null
+      if (event === 'SIGNED_OUT' || (workspaceOwner.current !== undefined && workspaceOwner.current !== owner)) resetIntent()
+      workspaceOwner.current = owner
+    })
+    const revision = accountRevision.current
+    void supabase.auth.getUser().then(({ data, error }) => {
+      if (!mounted || revision !== accountRevision.current) return
+      if (error || !data.user) {
+        if (hasStarterIntent()) setStarterStatus('Your starter is still saved in this tab. Refresh to try carrying it over again.')
+        return
+      }
+      if (workspaceOwner.current !== undefined && workspaceOwner.current !== data.user.id) {
+        resetIntent()
+        return
+      }
+      workspaceOwner.current = data.user.id
+      const starter = consumeStarterIntent(data.user.id, intentWasEdited.current)
+      if (starter.status === 'ready') {
+        intentWasEdited.current = true
+        setRelationshipNotes(starter.notes)
+        setStarterStatus('Your starter is in Relationship notes. Collect Sound Brain nodes when you’re ready.')
+      } else if (starter.status === 'discarded') {
+        setStarterStatus('Your current workspace was kept. The pending starter was not applied.')
+      } else if (starter.status === 'unavailable') {
+        setStarterStatus('Your starter could not be carried over. Return home to try again.')
+      }
+    }).catch(() => {
+      if (mounted && hasStarterIntent()) setStarterStatus('Your starter is still saved in this tab. Refresh to try carrying it over again.')
+    })
+    return () => { mounted = false; subscription.unsubscribe() }
+  }, [clearCandidate])
+
   const collectNode = useCallback((node: SelectedNode) => {
     if (requestInFlight.current) return
+    intentWasEdited.current = true
     setSelectedNodes(previous => previous.some(item => item.node_id === node.node_id) ? previous : [...previous, node])
     clearCandidate()
   }, [clearCandidate])
@@ -60,6 +112,7 @@ export default function Workspace({ discoveryNodes, affinities }: {
     try {
       const { error } = await createClient().auth.signOut()
       if (error) throw error
+      clearStarterIntent()
       router.push('/login')
       router.refresh()
     } catch {
@@ -69,6 +122,7 @@ export default function Workspace({ discoveryNodes, affinities }: {
 
   const handleGenerate = async () => {
     if (requestInFlight.current || selectedNodes.length === 0) return
+    const revision = accountRevision.current
     restoreGenerateFocus.current = document.activeElement === generateButton.current
     requestInFlight.current = true
     setIsGenerating(true)
@@ -79,6 +133,7 @@ export default function Workspace({ discoveryNodes, affinities }: {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nodes: selectedNodes, relationship_notes: relationshipNotes }),
       })
+      if (revision !== accountRevision.current) return
       if (response.status === 429) {
         const seconds = Number(response.headers.get('Retry-After'))
         const retry = Number.isSafeInteger(seconds) && seconds > 0 && seconds <= 2_678_400
@@ -86,11 +141,17 @@ export default function Workspace({ discoveryNodes, affinities }: {
         setError(`Compiler usage limit reached. ${retry} Your nodes and notes are still here.`)
         return
       }
+      if (response.status === 503) {
+        setError('Prompt compilation is currently unavailable. Your nodes and notes are still here.')
+        return
+      }
       if (!response.ok) throw new Error('Could not compile your prompt. Your nodes and notes are still here. Please try again.')
       const compiled = parseCompilerOutput(await response.json(), selectedNodes)
+      if (revision !== accountRevision.current) return
       setResult(compiled)
       setOutput(compiled.styles)
     } catch (caught) {
+      if (revision !== accountRevision.current) return
       setError(caught instanceof Error && caught.message.startsWith('The compiler returned')
         ? caught.message : 'Could not compile your prompt. Your nodes and notes are still here. Please try again.')
     } finally {
@@ -134,6 +195,7 @@ export default function Workspace({ discoveryNodes, affinities }: {
         <button onClick={handleSignOut} disabled={isGenerating} className={`min-h-11 px-2 text-sm text-gray-300 hover:text-white ${focusStyle}`}>Sign Out</button>
       </header>
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-4">
+        {starterStatus && <p role="status" className="text-sm text-gray-300">{starterStatus}</p>}
         <section aria-labelledby="sound-brain-heading" className="space-y-2">
           <h2 id="sound-brain-heading" className="text-sm font-medium text-gray-300">Sound Brain Collector</h2>
           <SoundBrainCanvas discoveryNodes={discoveryNodes} affinities={affinities} selectedNodes={selectedNodes} onCollect={collectNode} onRemove={removeNode} disabled={isGenerating} />
@@ -144,6 +206,7 @@ export default function Workspace({ discoveryNodes, affinities }: {
           <label htmlFor="relationship-notes" className="text-sm font-medium text-gray-300">Relationship notes</label>
           <p id="notes-help" className="text-sm text-gray-400">Describe roles, contrasts, or sections. For example: Piano leads while cello stays in the background.</p>
           <textarea id="relationship-notes" aria-describedby="notes-help" value={relationshipNotes} disabled={isGenerating} onChange={event => {
+            intentWasEdited.current = true
             setRelationshipNotes(event.target.value)
             // Keep clarification visible while the user answers it in notes.
             setOutput('')
