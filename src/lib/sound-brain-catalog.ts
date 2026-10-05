@@ -17,19 +17,18 @@ const discoveryIds = [
 ]
 
 export function getSoundBrainDiscovery() {
-  const nodes = discoveryIds.map(id => {
-    const term = catalogById.get(id)
-    if (!term) throw new Error('Sound Brain discovery ID is missing from the catalog')
-    return selectedRecord(term)
-  })
+  // Keep familiar opening suggestions, then expose every unchanged catalog record.
+  const ordered = [...discoveryIds, ...catalog.terms.map(term => term.id).filter(id => !discoveryIds.includes(id))]
+  const nodes = ordered.map(id => selectedRecord(catalogById.get(id)!))
   const relationships: Record<string, Record<string, number>> = matrix.relationships
   const affinities: DiscoveryAffinities = {}
   for (const a of nodes) {
     affinities[a.node_id] = {}
     for (const b of nodes) {
       // Labels address the supplied matrix; persistent identity remains the catalog ID.
-      affinities[a.node_id][b.node_id] = relationships[a.label]?.[b.label]
-        ?? relationships[b.label]?.[a.label] ?? matrix.default_weight
+      const weight = relationships[a.label]?.[b.label] ?? relationships[b.label]?.[a.label] ?? matrix.default_weight
+      // Missing scores use the same 0.20 visual default without a dense 899^2 payload.
+      if (weight !== matrix.default_weight) affinities[a.node_id][b.node_id] = weight
     }
   }
   return { nodes, affinities }
