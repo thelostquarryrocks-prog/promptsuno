@@ -30,6 +30,7 @@ export default function SoundBrainCanvas({ discoveryNodes, affinities, selectedN
   const [active, setActive] = useState<Drag | null>(null)
   const drag = useRef<Drag | null>(null)
   const orb = useRef<HTMLDivElement>(null)
+  const categoryRow = useRef<HTMLDivElement>(null)
   const [catchCount, setCatchCount] = useState(0)
   const [reducedMotion, setReducedMotion] = useState(false)
   const [compact, setCompact] = useState(false)
@@ -43,6 +44,20 @@ export default function SoundBrainCanvas({ discoveryNodes, affinities, selectedN
   const count = Math.min(pool.length, compact ? 8 : 12, Math.round(6 * density))
   const visible = Array.from({ length: count }, (_, i) => pool[(offset + i) % pool.length])
   const selected = new Set(selectedNodes.map(node => node.node_id))
+
+  useEffect(() => {
+    const revealCategory = () => {
+      const row = categoryRow.current
+      const button = row?.querySelector<HTMLButtonElement>('[aria-pressed="true"]')
+      if (!row || !button) return
+      const left = button.offsetLeft - row.offsetLeft
+      if (left < row.scrollLeft) row.scrollLeft = left
+      else if (left + button.offsetWidth > row.scrollLeft + row.clientWidth) row.scrollLeft = left + button.offsetWidth - row.clientWidth
+    }
+    revealCategory()
+    window.addEventListener('resize', revealCategory)
+    return () => window.removeEventListener('resize', revealCategory)
+  }, [category])
 
   useEffect(() => {
     if (!window.matchMedia) return
@@ -105,7 +120,7 @@ export default function SoundBrainCanvas({ discoveryNodes, affinities, selectedN
   }
 
   return <div className="sound-brain">
-    <div className="brain-categories" role="group" aria-label="Style categories">
+    <div ref={categoryRow} className="brain-categories" role="group" aria-label="Style categories">
       {categories.map(item => <button key={item} type="button" aria-pressed={category === item} onClick={() => switchCategory(item)}>
         <span aria-hidden="true">{symbols[item] ?? '✦'}</span> {item}
       </button>)}
