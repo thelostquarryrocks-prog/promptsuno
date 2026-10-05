@@ -12,5 +12,5 @@ export async function login(page: Page) {
   await page.getByRole('button', { name: 'Sign In', exact: true }).click()
   await expect(page).toHaveURL(/\/workspace$/, { timeout: 30_000 })
   await expect(page.getByText('Choose nodes without dragging')).toBeVisible({ timeout: 30_000 })
-  await expect(page.locator('canvas')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByTestId('sound-brain-scene')).toBeVisible({ timeout: 30_000 })
 }

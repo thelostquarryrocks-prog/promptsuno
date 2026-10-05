@@ -142,6 +142,7 @@ jobs:
           include-hidden-files: true
           path: |
             test-results/**/homepage-*.png
+            test-results/**/workspace-*.png
             .verification/learn-review-*.png
           if-no-files-found: warn
           retention-days: 7

@@ -27,6 +27,7 @@ export default function Workspace({ discoveryNodes, affinities }: {
   const [error, setError] = useState('')
   const [copyStatus, setCopyStatus] = useState('')
   const [starterStatus, setStarterStatus] = useState('')
+  const [discoverySession, setDiscoverySession] = useState(0)
   const intentWasEdited = useRef(false)
   const workspaceOwner = useRef<string | null | undefined>(undefined)
   const accountRevision = useRef(0)
@@ -55,6 +56,7 @@ export default function Workspace({ discoveryNodes, affinities }: {
     const supabase = createClient()
     const resetIntent = () => {
       accountRevision.current += 1
+      setDiscoverySession(value => value + 1)
       intentWasEdited.current = true
       clearStarterIntent()
       setRelationshipNotes('')
@@ -193,7 +195,7 @@ export default function Workspace({ discoveryNodes, affinities }: {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#080c0e] text-white">
+    <div className="brain-workspace flex min-h-screen flex-col text-white">
       <header className="flex items-center justify-between border-b border-[#303940] bg-[#090e11] px-5 py-4">
         <h1 className="text-2xl font-extrabold tracking-tighter"><Link href="/" className={focusStyle}>Prompt<span className="text-[#ff702b]">Suno</span></Link></h1>
         <button onClick={handleSignOut} disabled={isGenerating} className={`min-h-11 px-2 text-sm text-gray-300 hover:text-white ${focusStyle}`}>Sign Out</button>
@@ -202,11 +204,11 @@ export default function Workspace({ discoveryNodes, affinities }: {
         {starterStatus && <p role="status" className="text-sm text-gray-300">{starterStatus}</p>}
         <section aria-labelledby="sound-brain-heading" className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="sound-brain-heading" className="text-xl font-bold tracking-tight">Sound Brain Collector</h2><Link href="/learn/style-prompts" className={`text-sm text-amber-300 ${focusStyle}`}>Prompting guide →</Link></div>
-          <SoundBrainCanvas discoveryNodes={discoveryNodes} affinities={affinities} selectedNodes={selectedNodes} onCollect={collectNode} onRemove={removeNode} disabled={isGenerating} />
+          <SoundBrainCanvas key={discoverySession} discoveryNodes={discoveryNodes} affinities={affinities} selectedNodes={selectedNodes} onCollect={collectNode} onRemove={removeNode} disabled={isGenerating} />
           <p role="status" className="text-sm text-gray-300">{selectedNodes.length === 0 ? 'Collect nodes to begin.' : `${selectedNodes.length} ${selectedNodes.length === 1 ? 'node' : 'nodes'} selected.`}</p>
         </section>
 
-        <div className="space-y-2">
+        <div className="brain-notes space-y-2">
           <label htmlFor="relationship-notes" className="text-sm font-medium text-gray-300">Relationship notes</label>
           <p id="notes-help" className="text-sm text-gray-400">Describe roles, contrasts, or sections. For example: Piano leads while cello stays in the background.</p>
           <textarea id="relationship-notes" aria-describedby="notes-help" value={relationshipNotes} disabled={isGenerating} onChange={event => {

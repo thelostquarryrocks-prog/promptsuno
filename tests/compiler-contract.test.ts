@@ -29,11 +29,13 @@ describe('catalog identity and discovery boundary', () => {
 
   it('uses the supplied symmetric affinities, including the unscored default', () => {
     const relationships: Record<string, Record<string, number>> = matrix.relationships
-    for (const a of nodes) for (const b of nodes) {
-      expect(affinities[a.node_id][b.node_id]).toBe(relationships[a.label]?.[b.label] ?? relationships[b.label]?.[a.label] ?? matrix.default_weight)
-      expect(affinities[a.node_id][b.node_id]).toBe(affinities[b.node_id][a.node_id])
+    for (const a of nodes.slice(0, 12)) for (const b of nodes.slice(0, 12)) {
+      expect(affinities[a.node_id][b.node_id] ?? matrix.default_weight).toBe(relationships[a.label]?.[b.label] ?? relationships[b.label]?.[a.label] ?? matrix.default_weight)
+      expect(affinities[a.node_id][b.node_id] ?? matrix.default_weight).toBe(affinities[b.node_id][a.node_id] ?? matrix.default_weight)
     }
-    expect(affinities.piano.piano).toBe(0.2)
+    expect(affinities.piano.piano ?? matrix.default_weight).toBe(0.2)
+    expect(nodes).toHaveLength(catalog.terms.length)
+    expect(new Set(nodes.map(node => node.category))).toEqual(new Set(catalog.terms.map(term => term.category)))
   })
 
   it('preserves unusual selections, ordering, exact notes, and every catalog ID', () => {

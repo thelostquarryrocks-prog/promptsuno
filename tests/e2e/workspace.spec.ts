@@ -23,9 +23,7 @@ test('selection, authored notes, loading, error retry, and clarification preserv
   page.on('console', message => { if (message.type() === 'error' && !message.text().includes('status of 502')) errors.push(message.text()) })
   await login(page)
   await expect(page.getByRole('button', { name: 'Generate Prompt' })).toBeDisabled()
-  const canvas = page.locator('canvas')
-  await expect(canvas).toBeVisible()
-  expect(await canvas.evaluate(element => Boolean((element as HTMLCanvasElement).getContext('webgl2')))).toBe(true)
+  await expect(page.getByTestId('sound-brain-scene')).toBeVisible()
   await page.getByText('Choose nodes without dragging').click()
   for (const node of nodes) await page.getByRole('button', { name: `Collect ${node.label}`, exact: true }).click()
   await expect(page.getByText('3 nodes selected.')).toBeVisible()
@@ -140,73 +138,23 @@ test('network and malformed-output errors preserve intent and never expose copy/
   await expect(page.getByRole('button', { name: 'Export Styles' })).toHaveCount(0)
 })
 
-test('real raycast drag collects a catalog record and synchronizes removal', async ({ page }, testInfo) => {
-  await page.clock.install()
+test('real pointer drag collects a catalog record and synchronizes removal', async ({ page }, testInfo) => {
   await login(page)
-  const canvas = page.locator('canvas')
-  await page.getByRole('slider', { name: 'Speed', exact: true }).focus()
-  await page.keyboard.press('Home')
-  // Minimum Speed is 0.2, so targets still move. Hold the scene between input
-  // operations, then advance actual useFrame animation during the native drag.
-  // Fast-forwarding to a buffered browser timestamp fires due timers once; it
-  // does not wait a real minute or extend the test deadline.
-  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 60_000))
-  await canvas.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }))
-  // Text's asynchronous font preload can briefly suspend/hide the Canvas after
-  // its first frame. Drive real frames and wait for the resulting layout.
-  await expect.poll(async () => {
-    await page.clock.runFor(100)
-    return canvas.boundingBox()
-  }, { timeout: 30_000 }).not.toBeNull()
-  await expect(canvas).toBeVisible()
-  const box = await canvas.boundingBox()
-  expect(box, 'The rendered Canvas must have a layout box').not.toBeNull()
-  if (!box) throw new Error('Canvas layout unavailable')
-  let caught = false
-  // Discover through actual DOM pointer events and Three.js raycasts in one
-  // bounded browser-side scan, avoiding hundreds of protocol round trips on
-  // this software renderer. No scene refs, test hooks or collection shortcuts.
-  const targets = await canvas.evaluate(element => {
-    const rect = element.getBoundingClientRect()
-    const found: { x: number; y: number }[] = []
-    for (let y = 40; y < rect.height - 20 && found.length < 8; y += 25) {
-      for (let x = 25; x < rect.width - 20 && found.length < 8; x += 30) {
-        element.dispatchEvent(new PointerEvent('pointermove', {
-          bubbles: true, view: window, pointerId: 1, pointerType: 'mouse',
-          isPrimary: true, clientX: rect.x + x, clientY: rect.y + y,
-        }))
-        if (document.body.style.cursor === 'grab') found.push({ x: rect.x + x, y: rect.y + y })
-      }
-    }
-    return found
-  })
-  expect(targets.length, 'The scene must expose a real raycast target').toBeGreaterThan(0)
-  // Actual browser mouse input must independently hover, drag and collect it.
-  for (const target of targets) {
-    await page.mouse.move(target.x, target.y)
-    if (await page.evaluate(() => document.body.style.cursor) !== 'grab') continue
-    await page.mouse.down()
-    await page.clock.runFor(80)
-    // A raycast may hit a label already beside the Brain. Moving straight to
-    // center then stays below the scene's 0.5-world-unit drag threshold. Make
-    // a real 80px lateral drag first (inside the Canvas at every viewport),
-    // drive its frames, and only then move to the collection destination.
-    await page.mouse.move(target.x + (target.x < box.x + box.width / 2 ? 80 : -80), target.y, { steps: 5 })
-    await page.clock.runFor(80)
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 15 })
-    await page.clock.runFor(400)
-    await page.mouse.up()
-    caught = await page.getByText('1 node selected.', { exact: true }).isVisible()
-    if (caught) break
-  }
-  expect(caught, 'A real floating node should be draggable into the Brain').toBe(true)
-  const chip = page.locator('[data-node-id]')
+  const node = page.locator('[data-stream-node]').first()
+  await node.scrollIntoViewIfNeeded()
+  const box = (await node.boundingBox())!
+  const orb = (await page.getByTestId('brain-orb').boundingBox())!
+  const id = await node.getAttribute('data-stream-node')
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(orb.x + orb.width / 2, orb.y + orb.height / 2, { steps: 15 })
+  await page.mouse.up()
+  await expect(page.getByText('1 node selected.', { exact: true })).toBeVisible()
+  const chip = page.locator(`[data-node-id="${id}"]`)
   await expect(chip).toHaveCount(1)
-  const id = await chip.getAttribute('data-node-id')
-  const selected = page.locator('details button').filter({ hasText: (await chip.innerText()).replace('×', '').trim() })
-  await expect(selected).toBeDisabled()
+  await expect(node).toBeDisabled()
   await page.screenshot({ path: testInfo.outputPath('workspace-drag-collected.png') })
   await chip.getByRole('button').click()
-  await expect(page.locator(`[data-node-id="${id}"]`)).toHaveCount(0)
+  await expect(chip).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Generate Prompt' })).toBeDisabled()
 })

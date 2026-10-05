@@ -14,7 +14,6 @@ const auth = vi.hoisted(() => ({
   signOut: vi.fn(),
   listeners: new Set<(event: string, session: LocalSession) => void>(),
 }))
-const webgl = vi.hoisted(() => ({ pending: null as Promise<void> | null }))
 vi.mock('../src/lib/supabase/client', () => ({
   createClient: () => ({ auth: {
     getSession: auth.getSession,
@@ -27,19 +26,15 @@ vi.mock('../src/lib/supabase/client', () => ({
   } }),
 }))
 
-// Only replace WebGL and Next routing. Collection controls and Workspace are real.
-// Real drag/raycast and animation are exercised by the browser suite.
-vi.mock('@react-three/fiber', () => ({ Canvas: () => {
-  if (webgl.pending) throw webgl.pending
-  return <div data-testid="webgl-preview" />
-}, useFrame: vi.fn() }))
+// Collection controls and Workspace are real; only routing and auth are mocked.
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }))
 vi.mock('next/dynamic', async () => {
   const { default: Canvas } = await import('../src/components/SoundBrainCanvas')
   return { default: () => Canvas }
 })
 
-const { nodes, affinities } = getSoundBrainDiscovery()
+const { nodes: catalogNodes, affinities } = getSoundBrainDiscovery()
+const nodes = catalogNodes.slice(0, 12)
 const piano = nodes.find(node => node.node_id === 'piano')!
 const aggressive = nodes.find(node => node.node_id === 'aggressive')!
 const ambient = nodes.find(node => node.node_id === 'dreamy-ambient')!
@@ -50,7 +45,6 @@ const ready = (selected: SelectedNode[], styles = 'Piano is foreground in aggres
 })
 
 beforeEach(() => {
-  webgl.pending = null
   sessionStorage.clear()
   auth.listeners.clear()
   auth.getSession.mockReset().mockResolvedValue({ data: { session: { user: { id: 'workspace-test-owner' } } }, error: null })
@@ -170,26 +164,50 @@ async function collect(user: ReturnType<typeof userEvent.setup>, label: string) 
 }
 
 describe('canonical selection bridge', () => {
-  it('keeps open native collection controls mounted and usable while the scene suspends', async () => {
+  it('makes later catalog records reachable without mounting the entire catalog', async () => {
     const user = userEvent.setup()
     const onCollect = vi.fn()
-    const props = { discoveryNodes: nodes, affinities, selectedNodes: [], onCollect, onRemove: vi.fn() }
-    const view = render(<SoundBrainCanvas {...props} />)
+    render(<SoundBrainCanvas discoveryNodes={catalogNodes} affinities={affinities} selectedNodes={[]} onCollect={onCollect} onRemove={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Genre' }))
+    const later = catalogNodes.filter(node => node.category === 'Genre')[24]
+    expect(screen.queryByRole('button', { name: `Collect ${later.label}` })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Show more genre styles/ }))
+    await user.click(screen.getByRole('button', { name: `Collect ${later.label}` }))
+    expect(onCollect).toHaveBeenCalledWith(later)
+  })
+
+  it('keeps exact selections and notes across categories and resets discovery at account boundaries', async () => {
+    const user = renderWorkspace()
+    await waitFor(() => expect(auth.getSession).toHaveBeenCalled())
+    await user.click(screen.getByRole('button', { name: 'Instrument' }))
+    await collect(user, 'Piano')
+    fireEvent.change(screen.getByLabelText('Relationship notes'), { target: { value: '  Piano leads.\nKeep this exact.  ' } })
+    await user.click(screen.getByRole('button', { name: 'Genre' }))
+    await collect(user, 'Dreamy Ambient')
+    await user.click(screen.getByRole('button', { name: 'Instrument' }))
+    expect(screen.getByRole('button', { name: 'Collect Piano' })).toBeDisabled()
+    expect(screen.getByLabelText('Relationship notes')).toHaveValue('  Piano leads.\nKeep this exact.  ')
+    fetchMock.mockResolvedValue(Response.json(ready([piano, ambient])))
+    await user.click(screen.getByRole('button', { name: 'Generate Prompt' }))
+    await screen.findByLabelText('Editable Styles prompt')
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ nodes: [piano, ambient], relationship_notes: '  Piano leads.\nKeep this exact.  ' })
+    act(() => { for (const listener of auth.listeners) listener('SIGNED_IN', { user: { id: 'new-owner' } }) })
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Relationship notes')).toHaveValue('')
+    expect(screen.queryByRole('button', { name: 'Remove Piano' })).not.toBeInTheDocument()
+  })
+
+  it('keeps open native collection controls mounted through category transitions', async () => {
+    const user = userEvent.setup()
+    const onCollect = vi.fn()
+    render(<SoundBrainCanvas discoveryNodes={nodes} affinities={affinities} selectedNodes={[]} onCollect={onCollect} onRemove={vi.fn()} />)
     const summary = screen.getByText('Choose nodes without dragging')
     await user.click(summary)
     const details = summary.closest('details')!
-    expect(details).toHaveAttribute('open')
-    let finish!: () => void
-    webgl.pending = new Promise<void>(resolve => { finish = resolve })
-    view.rerender(<SoundBrainCanvas {...props} />)
-    expect(screen.getByText('Loading Sound Brain scene…')).toBeVisible()
-    expect(summary).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Instrument' }))
     expect(details).toHaveAttribute('open')
     await user.click(screen.getByRole('button', { name: 'Collect Piano' }))
     expect(onCollect).toHaveBeenCalledWith(piano)
-    webgl.pending = null
-    await act(async () => finish())
-    expect(screen.queryByText('Loading Sound Brain scene…')).not.toBeInTheDocument()
     expect(details).toHaveAttribute('open')
   })
 
