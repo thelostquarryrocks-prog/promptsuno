@@ -5,6 +5,7 @@ import Workspace from '../src/components/Workspace'
 import SoundBrainCanvas from '../src/components/SoundBrainCanvas'
 import { getSoundBrainDiscovery } from '../src/lib/sound-brain-catalog'
 import type { CompilerInput, SelectedNode } from '../src/lib/compiler-contract'
+import { createWorkspaceDraft, workspaceStorageKey } from '../src/lib/workspace-draft'
 import { STARTER_INTENT_STORAGE_KEY } from '../src/lib/starter-intent'
 
 type LocalSession = { user: { id: string } } | null
@@ -64,7 +65,7 @@ function seedStarter(ownerId: string | null = 'workspace-test-owner') {
 }
 
 describe('starter handoff and account boundaries', () => {
-  it('consumes starter notes once without selecting nodes or calling the compiler', async () => {
+  it('consumes starter once and restores its autosaved notes on remount without calling the compiler', async () => {
     seedStarter()
     const view = render(<Workspace discoveryNodes={nodes} affinities={affinities} />)
     await waitFor(() => expect(screen.getByLabelText('Relationship notes')).toHaveValue('  Piano leads.\nLeave space.  \n\nExample directions: Cinematic, Warm vocals'))
@@ -75,7 +76,7 @@ describe('starter handoff and account boundaries', () => {
     view.unmount()
     renderWorkspace()
     await waitFor(() => expect(auth.getSession).toHaveBeenCalledTimes(2))
-    expect(screen.getByLabelText('Relationship notes')).toHaveValue('')
+    await waitFor(() => expect(screen.getByLabelText('Relationship notes')).toHaveValue('  Piano leads.\nLeave space.  \n\nExample directions: Cinematic, Warm vocals'))
   })
 
   it('does not overwrite notes entered while the local session read is pending', async () => {
@@ -401,5 +402,129 @@ describe('compile states, authored notes, and candidate actions', () => {
     expect(screen.getByRole('button', { name: 'Copy to Clipboard' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Export Styles' })).toBeDisabled()
     await waitFor(() => expect(screen.queryByText(/Could not export/)).not.toBeInTheDocument())
+  })
+})
+
+
+describe('shared song autosave and recovery', () => {
+  it('retains exact catalog intent, edited output, title and active mode across remount', async () => {
+    const user = userEvent.setup()
+    const view = render(<Workspace discoveryNodes={nodes} affinities={affinities} />)
+    await collect(user, 'Piano')
+    const notes = '  Piano leads.\nKeep the space.  '
+    fireEvent.change(screen.getByLabelText('Relationship notes'), { target: { value: notes } })
+    fireEvent.change(screen.getByLabelText('Song title'), { target: { value: 'Quiet windows' } })
+    fetchMock.mockResolvedValueOnce(Response.json(ready([piano], 'Compiled piano.')))
+    await user.click(screen.getByRole('button', { name: 'Generate Prompt' }))
+    const output = await screen.findByLabelText('Editable Styles prompt')
+    fireEvent.change(output, { target: { value: '  My edited Styles.\nKeep exact.  ' } })
+    await user.click(screen.getByRole('button', { name: 'Lyrics' }))
+    await user.click(screen.getByRole('button', { name: 'Doctor' }))
+    const stored = JSON.parse(sessionStorage.getItem(workspaceStorageKey('workspace-test-owner'))!)
+    expect(stored.styleIntent.selectedNodes).toEqual([piano])
+    expect(stored.styleIntent.relationshipNotes).toBe(notes)
+    expect(stored.styleIntent.compilerResult.styles).toBe('Compiled piano.')
+    expect(stored.styleIntent.compiledStyles).toBe('  My edited Styles.\nKeep exact.  ')
+    view.unmount()
+    renderWorkspace()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Doctor' })).toHaveAttribute('aria-current', 'page'))
+    expect(screen.getByLabelText('Song title')).toHaveValue('Quiet windows')
+    await user.click(screen.getByRole('button', { name: 'Brain' }))
+    expect(screen.getByLabelText('Relationship notes')).toHaveValue(notes)
+    expect(screen.getByLabelText('Editable Styles prompt')).toHaveValue('  My edited Styles.\nKeep exact.  ')
+    expect(screen.getByRole('button', { name: 'Collect Piano' })).toBeDisabled()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('leaves a corrupt stored copy untouched until explicit recovery', async () => {
+    const key = workspaceStorageKey('workspace-test-owner')
+    sessionStorage.setItem(key, '{unreadable draft')
+    const user = renderWorkspace()
+    await screen.findByText(/Saved song could not be read/)
+    fireEvent.change(screen.getByLabelText('Relationship notes'), { target: { value: 'Recovered current idea.' } })
+    await collect(user, 'Piano')
+    expect(sessionStorage.getItem(key)).toBe('{unreadable draft')
+    await user.click(screen.getByText(/Untitled song.*1 sound ideas/))
+    await user.click(screen.getByRole('button', { name: 'Replace unreadable copy with this song' }))
+    await screen.findByText('Saved in this tab')
+    expect(JSON.parse(sessionStorage.getItem(key)!).styleIntent).toMatchObject({ selectedNodes: [piano], relationshipNotes: 'Recovered current idea.' })
+  })
+
+  it('keeps edits in memory after storage quota failure and retries the current song', async () => {
+    const user = renderWorkspace()
+    await screen.findByText('Saved in this tab')
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('Quota reached', 'QuotaExceededError') })
+    try {
+      fireEvent.change(screen.getByLabelText('Relationship notes'), { target: { value: 'Unsaved but still here.' } })
+      await screen.findByText('Not saved \u2014 storage is unavailable. Keep this tab open and export your work.')
+      expect(screen.getByLabelText('Relationship notes')).toHaveValue('Unsaved but still here.')
+    } finally { setItem.mockRestore() }
+    await user.click(screen.getByRole('button', { name: 'Retry autosave' }))
+    await screen.findByText('Saved in this tab')
+    expect(JSON.parse(sessionStorage.getItem(workspaceStorageKey('workspace-test-owner'))!).styleIntent.relationshipNotes).toBe('Unsaved but still here.')
+  })
+
+  it('loads the next account draft and ignores the previous account pending response', async () => {
+    const other = createWorkspaceDraft()
+    other.project.title = 'Another song'
+    other.styleIntent.relationshipNotes = 'Other account notes.'
+    sessionStorage.setItem(workspaceStorageKey('different-test-owner'), JSON.stringify(other))
+    const user = renderWorkspace()
+    await collect(user, 'Piano')
+    let finish!: (response: Response) => void
+    fetchMock.mockImplementationOnce(() => new Promise<Response>(resolve => { finish = resolve }))
+    await user.click(screen.getByRole('button', { name: 'Generate Prompt' }))
+    act(() => { for (const listener of auth.listeners) listener('SIGNED_IN', { user: { id: 'different-test-owner' } }) })
+    await act(async () => finish(Response.json(ready([piano], 'Previous account output.'))))
+    expect(screen.getByLabelText('Song title')).toHaveValue('Another song')
+    expect(screen.getByLabelText('Relationship notes')).toHaveValue('Other account notes.')
+    expect(screen.queryByLabelText('Editable Styles prompt')).not.toBeInTheDocument()
+    expect(sessionStorage.getItem(workspaceStorageKey('workspace-test-owner'))).toBeNull()
+    expect(JSON.parse(sessionStorage.getItem(workspaceStorageKey('different-test-owner'))!).styleIntent.compiledStyles).toBe('')
+  })
+})
+
+
+describe('saved song conflicts', () => {
+  it('protects the saved original when edits precede delayed initial session resolution', async () => {
+    const key = workspaceStorageKey('workspace-test-owner')
+    const saved = createWorkspaceDraft()
+    saved.styleIntent.selectedNodes = [piano]
+    saved.styleIntent.relationshipNotes = '  Original saved direction.\nKeep exactly.  '
+    const original = JSON.stringify(saved)
+    sessionStorage.setItem(key, original)
+    let resolveSession!: (value: unknown) => void
+    auth.getSession.mockImplementationOnce(() => new Promise(resolve => { resolveSession = resolve }))
+    renderWorkspace()
+    fireEvent.change(screen.getByLabelText('Relationship notes'), { target: { value: 'New idea before session is ready.' } })
+    await act(async () => resolveSession({ data: { session: { user: { id: 'workspace-test-owner' } } }, error: null }))
+    await screen.findByText(/Saved copy found/)
+    expect(screen.getByLabelText('Relationship notes')).toHaveValue('New idea before session is ready.')
+    expect(sessionStorage.getItem(key)).toBe(original)
+    fireEvent.change(screen.getByLabelText('Relationship notes'), { target: { value: 'Further unsaved edits.' } })
+    expect(sessionStorage.getItem(key)).toBe(original)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('protects a saved original discovered after denied storage access recovers', async () => {
+    const key = workspaceStorageKey('workspace-test-owner')
+    const saved = createWorkspaceDraft()
+    saved.project.title = 'Previously saved song'
+    saved.styleIntent.relationshipNotes = 'Previously saved direction.'
+    const original = JSON.stringify(saved)
+    sessionStorage.setItem(key, original)
+    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new DOMException('Storage denied', 'SecurityError') })
+    const user = renderWorkspace()
+    try {
+      await screen.findByRole('button', { name: 'Retry autosave' })
+      fireEvent.change(screen.getByLabelText('Relationship notes'), { target: { value: 'New work during storage outage.' } })
+    } finally { getItem.mockRestore() }
+    await user.click(screen.getByRole('button', { name: 'Retry autosave' }))
+    await screen.findByText(/Saved copy found/)
+    expect(screen.getByLabelText('Relationship notes')).toHaveValue('New work during storage outage.')
+    expect(sessionStorage.getItem(key)).toBe(original)
+    fireEvent.change(screen.getByLabelText('Song title'), { target: { value: 'Current unsaved song' } })
+    expect(sessionStorage.getItem(key)).toBe(original)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })
