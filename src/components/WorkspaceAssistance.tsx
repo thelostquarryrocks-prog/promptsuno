@@ -36,7 +36,10 @@ export default function WorkspaceAssistance({ action, targetId = null, available
       const result = parseAssistResponse(await response.json(), input)
       if (controller.signal.aborted) return
       update(current => {
-        if (current.project.id !== projectId || JSON.stringify(buildAssistRequest(current, action, sectionTarget, instruction)) !== fingerprint) throw new Error('Your song changed while assistance was working. No suggestion was added; try again with the current version.')
+        // Suspense can retain the previous workbench while the next mode loads.
+        // Immutable draft identity also catches a quick switch away and back,
+        // or an edit later undone. Effect cleanup alone is too late in that gap.
+        if (current !== draft || current.mode !== action || current.project.id !== projectId || JSON.stringify(buildAssistRequest(current, action, sectionTarget, instruction)) !== fingerprint) throw new Error('Your song changed while assistance was working. No suggestion was added; try again with the current version.')
         if (current.doctor.proposedChanges.length + result.proposals.length > 20) throw new Error('This song has reached its local experiment limit. Export your song before starting another.')
         const proposals = result.proposals.map(proposal => makeProposal(current, { source: 'assistant', target: proposal.target, targetId: proposal.targetId, after: proposal.after, rationale: proposal.rationale }))
         return { ...current, doctor: { ...current.doctor, hypotheses: result.hypotheses, proposedChanges: [...current.doctor.proposedChanges, ...proposals] } }

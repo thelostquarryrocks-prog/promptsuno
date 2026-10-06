@@ -4,10 +4,10 @@
 .workbench-kicker { font-size:.68rem; color:#cdad7f; letter-spacing:.18em; }
 .workbench-intro { color:#d4dce0; font-size:1.1rem; }
 .workbench-muted { font-size:.85rem; color:#a3afb7; line-height:1.6; }
-.creative-workbench input,.creative-workbench textarea,.creative-workbench select,.proposal-review textarea { background:#0e171c; border:1px solid #3a464e; border-radius:.75rem; padding:.8rem; color:#f1f3f4; width:100%; min-width:0; }
-.creative-workbench input:focus-visible,.creative-workbench textarea:focus-visible,.creative-workbench select:focus-visible,.creative-workbench button:focus-visible,.creative-workbench summary:focus-visible,.proposal-review :focus-visible { outline:2px solid #ffcf57; outline-offset:3px; }
+.creative-workbench input,.creative-workbench textarea,.creative-workbench select,.proposal-review textarea,.assistance-panel textarea,.assistance-panel select { background:#0e171c; border:1px solid #3a464e; border-radius:.75rem; padding:.8rem; color:#f1f3f4; width:100%; min-width:0; }
+.creative-workbench input:focus-visible,.creative-workbench textarea:focus-visible,.creative-workbench select:focus-visible,.creative-workbench button:focus-visible,.creative-workbench summary:focus-visible,.proposal-review :focus-visible,.assistance-panel :focus-visible { outline:2px solid #ffcf57; outline-offset:3px; }
 .creative-workbench button,.proposal-review button,.assistance-panel button { border:1px solid #55442e; border-radius:999px; padding:.55rem 1rem; min-height:44px; font-size:.85rem; color:#f0c987; background:#231c14; }
-.creative-workbench button:disabled,.proposal-review button:disabled { opacity:.5; cursor:not-allowed; }
+.creative-workbench button:disabled,.proposal-review button:disabled,.assistance-panel button:disabled { opacity:.5; cursor:not-allowed; }
 .symptom-choices,.workbench-actions { display:flex; flex-wrap:wrap; gap:.5rem; }
 .symptom-choices button[aria-pressed=true] { background:#ffb13c; color:#12181c; }
 .doctor-context,.experiment-builder,.hypothesis-card,.proposal-card { border:1px solid #35414a; border-radius:1rem; padding:1rem; background:#0d151a; overflow-wrap:anywhere; }
@@ -22,6 +22,7 @@
 .preserve-lines { white-space:pre-wrap; overflow-wrap:anywhere; }
 .proposal-original { padding:.75rem; border-left:2px solid #8e672f; color:#c9d0d4; }
 .assistance-panel { display:grid; gap:.75rem; }
+.assistance-panel select { min-height:44px; }
 .creative-workbench [role=alert],.proposal-review [role=alert] { color:#ffb4aa; }
 .creative-workbench a { color:#ffca6d; text-decoration:underline; }
 .intent-spotlight { border:1px solid #d2a45c; border-radius:1rem; padding:1rem; background:#211b14; }
