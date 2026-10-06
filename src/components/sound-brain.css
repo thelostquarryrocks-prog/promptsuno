@@ -78,3 +78,13 @@
   .brain-workspace .brain-notes { padding: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .sound-brain *, .sound-brain *::after { animation: none !important; transition: none !important; } }
+.song-identity { display: grid; gap: .35rem; }
+.song-title { width: 100%; min-width: 0; background: transparent; border: 0; color: #e8eef1; font-size: 1rem; font-weight: 650; }
+.song-title:focus-visible { outline: 2px solid #ffb13c; outline-offset: 4px; }
+.song-modes { display: flex; gap: .3rem; padding: .3rem; background: #10191f; border: 1px solid #303e46; border-radius: 999px; }
+.song-modes button { flex: 1; min-height: 44px; border-radius: 999px; color: #b7c1c8; font-weight: 650; }
+.song-modes button[aria-current] { background: #ffb13c; color: #11191e; }
+.song-modes button:focus-visible { outline: 2px solid #ffe043; outline-offset: 3px; }
+.song-surface { min-height: 22rem; padding: 1.25rem; border: 1px solid #303e46; border-radius: 1.5rem; background: #0d171d; }
+.song-dock { border-top: 1px solid #303e46; padding: 1rem 0; overflow-wrap: anywhere; }
+.song-dock summary { min-height: 44px; cursor: pointer; color: #c5cdd2; font-size: .85rem; }

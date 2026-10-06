@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { createClient } from '../lib/supabase/client'
 import { parseCompilerOutput, type CompilerOutput, type DiscoveryAffinities, type SelectedNode } from '../lib/compiler-contract'
 import { clearStarterIntent, consumeStarterIntent, hasStarterIntent } from '../lib/starter-intent'
+import { WorkspaceProvider, useWorkspace } from './WorkspaceProvider'
 
 const SoundBrainCanvas = dynamic(() => import('./SoundBrainCanvas'), {
   ssr: false,
@@ -19,10 +20,16 @@ export default function Workspace({ discoveryNodes, affinities }: {
   discoveryNodes: SelectedNode[]
   affinities: DiscoveryAffinities
 }) {
-  const [selectedNodes, setSelectedNodes] = useState<SelectedNode[]>([])
-  const [relationshipNotes, setRelationshipNotes] = useState('')
-  const [result, setResult] = useState<CompilerOutput | null>(null)
-  const [output, setOutput] = useState('')
+  return <WorkspaceProvider catalog={discoveryNodes}><WorkspaceTools discoveryNodes={discoveryNodes} affinities={affinities} /></WorkspaceProvider>
+}
+
+function WorkspaceTools({ discoveryNodes, affinities }: { discoveryNodes: SelectedNode[]; affinities: DiscoveryAffinities }) {
+  const { draft, update, openAccount, closeAccount, saveStatus, retrySave, recoverSave } = useWorkspace()
+  const { selectedNodes, relationshipNotes, compilerResult: result, compiledStyles: output } = draft.styleIntent
+  const setSelectedNodes = useCallback((change: (nodes: SelectedNode[]) => SelectedNode[]) => update(current => ({ ...current, styleIntent: { ...current.styleIntent, selectedNodes: change(current.styleIntent.selectedNodes), compilerResult: null, compiledStyles: '' } })), [update])
+  const setRelationshipNotes = useCallback((relationshipNotes: string) => update(current => ({ ...current, styleIntent: { ...current.styleIntent, relationshipNotes } })), [update])
+  const setResult = useCallback((compilerResult: CompilerOutput | null) => update(current => ({ ...current, styleIntent: { ...current.styleIntent, compilerResult } })), [update])
+  const setOutput = useCallback((compiledStyles: string) => update(current => ({ ...current, styleIntent: { ...current.styleIntent, compiledStyles } })), [update])
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState('')
   const [copyStatus, setCopyStatus] = useState('')
@@ -49,7 +56,7 @@ export default function Workspace({ discoveryNodes, affinities }: {
     setOutput('')
     setError('')
     setCopyStatus('')
-  }, [])
+  }, [setResult, setOutput])
 
   useEffect(() => {
     let mounted = true
@@ -59,15 +66,18 @@ export default function Workspace({ discoveryNodes, affinities }: {
       setDiscoverySession(value => value + 1)
       intentWasEdited.current = true
       clearStarterIntent()
-      setRelationshipNotes('')
-      setSelectedNodes([])
+      closeAccount()
       setStarterStatus('')
-      clearCandidate()
+      setError('')
+      setCopyStatus('')
     }
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return
       const owner = session?.user.id ?? null
-      if (event === 'SIGNED_OUT' || (workspaceOwner.current !== undefined && workspaceOwner.current !== owner)) resetIntent()
+      if (event === 'SIGNED_OUT' || (workspaceOwner.current !== undefined && workspaceOwner.current !== owner)) {
+        resetIntent()
+        if (owner) openAccount(owner, false)
+      }
       workspaceOwner.current = owner
     })
     const revision = accountRevision.current
@@ -85,7 +95,8 @@ export default function Workspace({ discoveryNodes, affinities }: {
         return
       }
       workspaceOwner.current = data.session.user.id
-      const starter = consumeStarterIntent(data.session.user.id, intentWasEdited.current)
+      const restored = openAccount(data.session.user.id, intentWasEdited.current)
+      const starter = consumeStarterIntent(data.session.user.id, intentWasEdited.current || restored)
       if (starter.status === 'ready') {
         intentWasEdited.current = true
         setRelationshipNotes(starter.notes)
@@ -98,21 +109,21 @@ export default function Workspace({ discoveryNodes, affinities }: {
     }).catch(() => {
       if (mounted && hasStarterIntent()) setStarterStatus('Your starter is still saved in this tab. Refresh to try carrying it over again.')
     })
-    return () => { mounted = false; subscription.unsubscribe() }
-  }, [clearCandidate])
+    return () => { mounted = false; accountRevision.current += 1; subscription.unsubscribe() }
+  }, [closeAccount, openAccount, setRelationshipNotes])
 
   const collectNode = useCallback((node: SelectedNode) => {
     if (requestInFlight.current) return
     intentWasEdited.current = true
     setSelectedNodes(previous => previous.some(item => item.node_id === node.node_id) ? previous : [...previous, node])
     clearCandidate()
-  }, [clearCandidate])
+  }, [clearCandidate, setSelectedNodes])
 
   const removeNode = useCallback((nodeId: string) => {
     if (requestInFlight.current) return
     setSelectedNodes(previous => previous.filter(node => node.node_id !== nodeId))
     clearCandidate()
-  }, [clearCandidate])
+  }, [clearCandidate, setSelectedNodes])
 
   const handleSignOut = async () => {
     try {
@@ -201,7 +212,17 @@ export default function Workspace({ discoveryNodes, affinities }: {
         <button onClick={handleSignOut} disabled={isGenerating} className={`min-h-11 px-2 text-sm text-gray-300 hover:text-white ${focusStyle}`}>Sign Out</button>
       </header>
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-4 pt-7 sm:p-6">
+        <div className="song-identity">
+          <label htmlFor="song-title" className="sr-only">Song title</label>
+          <input id="song-title" value={draft.project.title} maxLength={120} onChange={event => update(current => ({ ...current, project: { ...current.project, title: event.target.value } }))} className="song-title" />
+          <p role="status" className="text-xs text-gray-400">{saveStatus}</p>
+          {saveStatus.startsWith('Not saved') && <button onClick={retrySave} className={`text-sm text-amber-300 ${focusStyle}`}>Retry autosave</button>}
+        </div>
+        <nav aria-label="Song tools" className="song-modes">
+          {(['brain', 'lyrics', 'doctor'] as const).map(mode => <button key={mode} aria-current={draft.mode === mode ? 'page' : undefined} onClick={() => update(current => ({ ...current, mode }))}>{mode === 'brain' ? 'Brain' : mode === 'lyrics' ? 'Lyrics' : 'Doctor'}</button>)}
+        </nav>
         {starterStatus && <p role="status" className="text-sm text-gray-300">{starterStatus}</p>}
+        <div hidden={draft.mode !== 'brain'} className="space-y-6">
         <section aria-labelledby="sound-brain-heading" className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="sound-brain-heading" className="text-xl font-bold tracking-tight">Sound Brain Collector</h2><Link href="/learn/style-prompts" className={`text-sm text-amber-300 ${focusStyle}`}>Prompting guide →</Link></div>
           <SoundBrainCanvas key={discoverySession} discoveryNodes={discoveryNodes} affinities={affinities} selectedNodes={selectedNodes} onCollect={collectNode} onRemove={removeNode} disabled={isGenerating} />
@@ -249,6 +270,36 @@ export default function Workspace({ discoveryNodes, affinities }: {
             {result.interpretations.length > 0 && <ul className="list-disc space-y-1 pl-5 text-sm text-gray-300">{result.interpretations.map((item, index) => <li key={index}>{item}</li>)}</ul>}
           </section>
         )}
+        </div>
+        {draft.mode !== 'brain' && <section className="song-surface space-y-4" aria-labelledby="mode-heading">
+          <h2 id="mode-heading" className="text-xl font-bold">{draft.mode === 'lyrics' ? 'Lyrics Studio' : 'Prompt Doctor'}</h2>
+          <p className="text-gray-300">{draft.mode === 'lyrics' ? 'The words and structure of this song.' : 'What missed when you listened?'}</p>
+          <p className="text-sm text-gray-400">Your sound intent is already here. This workbench is being connected next.</p>
+        </section>}
+        <details className="song-dock">
+          <summary>{draft.project.title || 'Untitled song'} · {selectedNodes.length} sound ideas · {draft.lyrics.text ? 'Lyrics draft' : 'No lyrics yet'}</summary>
+          <div className="space-y-3 pt-4 text-sm">
+            <p><strong>Sound:</strong> {selectedNodes.map(node => node.label).join(' · ') || 'Collect your first idea in Brain.'}</p>
+            <p className="whitespace-pre-wrap"><strong>Intent:</strong> {relationshipNotes || 'No relationship notes yet.'}</p>
+            <p><strong>Lyrics:</strong> {draft.lyrics.sections.map(section => section.title).join(' · ') || 'No sections yet.'}</p>
+            <p className="text-gray-400">Local to this browser tab and account. No cloud sync.</p>
+            <button className={`min-h-11 text-amber-300 ${focusStyle}`} onClick={() => {
+              try {
+                const url = URL.createObjectURL(new Blob([JSON.stringify(draft, null, 2)], { type: 'application/json' }))
+                const link = document.createElement('a')
+                link.href = url
+                link.download = 'promptsuno-song.json'
+                link.click()
+                setTimeout(() => URL.revokeObjectURL(url), 1000)
+              } catch { setError('Could not export your song. Keep this tab open and copy your work manually.') }
+            }}>Export song backup</button>
+            {saveStatus.startsWith('Saved song could not') && <div className="space-y-2">
+              <p>The unreadable saved copy is protected. Export the current song first. Replacing it discards the unreadable copy.</p>
+              <button onClick={recoverSave} className={`min-h-11 text-amber-300 ${focusStyle}`}>Replace unreadable copy with this song</button>
+            </div>}
+            {saveStatus.startsWith('Saved copy found') && <button onClick={recoverSave} className={`min-h-11 text-amber-300 ${focusStyle}`}>Replace saved copy with this song</button>}
+          </div>
+        </details>
       </main>
     </div>
   )
