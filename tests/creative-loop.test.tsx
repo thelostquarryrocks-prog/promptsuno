@@ -187,6 +187,17 @@ describe('pending creative response boundaries', () => {
     expect(sessionStorage.getItem(key)).toBeNull()
   })
 
+  it('discards a delayed response after an intervening edit is undone', async () => {
+    const { finish, response } = await pendingDoctor()
+    const report = screen.getByLabelText('What did you hear, and what did you want instead?')
+    fireEvent.change(report, { target: { value: 'An intervening observation.' } })
+    fireEvent.change(report, { target: { value: 'Piano was missing.' } })
+    await act(async () => finish(Response.json(response)))
+    expect(await screen.findByText(/Your song changed while assistance was working/)).toBeInTheDocument()
+    expect(stored().doctor.proposedChanges).toHaveLength(0)
+    expect(stored().doctor.reportedProblem).toBe('Piano was missing.')
+  })
+
   it.each(['relationshipNotes', 'compiledStyles'] as const)('does not overwrite a Doctor %s change when an older compiler request finishes', async target => {
     const draft = seedSong()
     draft.doctor.proposedChanges = [makeProposal(draft, { source: 'user', target, targetId: null, after: 'Newer explicitly applied direction.', rationale: 'A manual experiment.' })]

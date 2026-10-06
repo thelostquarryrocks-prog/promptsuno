@@ -62,6 +62,12 @@ export async function POST(req: Request) {
   let input: AssistRequest
   try {
     input = parseAssistRequest(await readAssistanceRequest(req))
+    if (input.action === 'lyrics' && input.preservationGoals.some(goal => goal.scope === 'section' && goal.targetId === input.targetId)) {
+      return json({ error: 'This section is preserved. Choose an unlocked section to revise.' }, 400)
+    }
+    if (input.action === 'doctor' && !input.reportedProblem.trim()) {
+      return json({ error: 'Describe what you heard before asking Doctor for an experiment.' }, 400)
+    }
     if (input.nodes.length) input = { ...input, ...resolveCompilerInput({ nodes: input.nodes, relationship_notes: input.relationship_notes }) }
     else if (new TextEncoder().encode(input.relationship_notes).length > 16 * 1024) return json({ error: 'Invalid assistance context.' }, 400)
   } catch (error) {

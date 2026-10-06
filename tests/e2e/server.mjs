@@ -3,7 +3,7 @@
 import http from 'node:http'
 import { spawn } from 'node:child_process'
 
-const user = {
+let user = {
   id: '00000000-0000-4000-8000-000000000001', aud: 'authenticated', role: 'authenticated',
   email: 'test@example.invalid', email_confirmed_at: '2026-01-01T00:00:00Z',
   app_metadata: { provider: 'email', providers: ['email'] }, user_metadata: {},
@@ -21,6 +21,9 @@ let lastIntent = null
 let quotaUsed = 0
 let quotaLimit = 10000
 let quotaMode = 'normal'
+let assistanceMode = 'normal'
+let assistanceCalls = 0
+const pendingAssistance = new Set()
 
 const fixture = http.createServer((request, response) => {
   // Software-rendered UI steps can outlast Node's idle keep-alive window.
@@ -33,7 +36,20 @@ const fixture = http.createServer((request, response) => {
   response.setHeader('Content-Type', 'application/json')
   if (request.method === 'OPTIONS') { response.writeHead(204); response.end(); return }
   if (request.url === '/__fixture/stats') {
-    response.end(JSON.stringify({ modelCalls, lastIntent, quotaUsed }))
+    response.end(JSON.stringify({ modelCalls, lastIntent, quotaUsed, assistanceCalls, pendingAssistance: pendingAssistance.size }))
+  } else if (request.url?.startsWith('/__fixture/assistance') && request.method === 'POST') {
+    assistanceMode = new URL(request.url, 'http://127.0.0.1:3132').searchParams.get('mode') ?? 'normal'
+    if (assistanceMode === 'release' || assistanceMode === 'normal') {
+      for (const finish of pendingAssistance) finish()
+      pendingAssistance.clear()
+      assistanceMode = 'normal'
+    }
+    response.end('{}')
+  } else if (request.url?.startsWith('/__fixture/account') && request.method === 'POST') {
+    const second = new URL(request.url, 'http://127.0.0.1:3132').searchParams.get('second') === '1'
+    user = { ...user, id: second ? '00000000-0000-4000-8000-000000000002' : '00000000-0000-4000-8000-000000000001' }
+    issuedTokens.clear(); sessionActive = false
+    response.end('{}')
   } else if (request.url?.startsWith('/__fixture/quota') && request.method === 'POST') {
     const settings = new URL(request.url, 'http://127.0.0.1:3132')
     quotaUsed = 0
@@ -83,6 +99,30 @@ const fixture = http.createServer((request, response) => {
     request.on('end', () => {
       const payload = JSON.parse(body)
       lastIntent = JSON.parse(payload.messages.find(message => message.role === 'user').content)
+      if (payload.response_format?.json_schema?.name === 'workspace_assistance') {
+        assistanceCalls += 1
+        if (assistanceMode === 'error') {
+          response.writeHead(500); response.end(JSON.stringify({ error: { message: 'Synthetic assistance failure' } })); return
+        }
+        const input = lastIntent
+        const section = input.sections.find(section => section.id === input.targetId)
+        const result = {
+          observations: [input.action === 'doctor' ? `You reported: ${input.reportedProblem}` : 'This request targets one lyric section.'],
+          hypotheses: input.action === 'doctor' ? ['A clearer instrument role might be worth testing.'] : [],
+          proposals: [{ target: input.action === 'lyrics' ? 'lyricsSection' : 'relationshipNotes',
+            targetId: input.action === 'lyrics' ? input.targetId : null,
+            before: input.action === 'lyrics' ? section.text : input.relationship_notes,
+            after: input.action === 'lyrics' ? section.text.replace('Old ending', 'New ending') : `${input.relationship_notes}\nCello answers the vocal.`,
+            rationale: 'Synthetic fixture experiment; no real model was called.' }],
+        }
+        const content = assistanceMode === 'malformed' ? '{bad json' : JSON.stringify(result)
+        const finish = () => { pendingAssistance.delete(finish); if (!response.destroyed) response.end(JSON.stringify({ choices: [{ message: { content } }] })) }
+        if (assistanceMode === 'hold' || assistanceMode === 'timeout') {
+          pendingAssistance.add(finish)
+          response.on('close', () => pendingAssistance.delete(finish))
+        } else finish()
+        return
+      }
       const result = {
         version: '1.0.0', status: 'ready', styles: 'Fixture Styles from exact authored intent.',
         coverage: lastIntent.nodes.map(node => ({ node_id: node.node_id, status: 'preserved' })),
@@ -106,7 +146,7 @@ const next = spawn(process.execPath, ['node_modules/next/dist/bin/next', mode, '
     // Always override inherited credentials: browser verification cannot spend money.
     OPENAI_API_KEY: 'local-model-fixture-placeholder',
     OPENAI_BASE_URL: 'http://127.0.0.1:3132/v1',
-    WORKSPACE_ASSIST_ENABLED: 'false',
+    WORKSPACE_ASSIST_ENABLED: 'true',
     NEXT_TELEMETRY_DISABLED: '1',
   },
 })
