@@ -22,6 +22,22 @@ beforeEach(() => {
   createCompletion.mockResolvedValue({ choices: [{ message: { content: JSON.stringify(ready) } }] })
 })
 describe('guarded workspace assistance', () => {
+  it('instructs Doctor to preserve authored roles across a Styles experiment without changing source context', async () => {
+    const context = { ...input, action: 'doctor', targetId: null, relationship_notes: 'Piano carries the melody. Keep its lead role.', styles: 'Sparse piano lead.', reportedProblem: 'The arrangement sounds crowded.', instruction: 'Try a small density change.' }
+    const proposal = { observations: ['You reported a crowded arrangement.'], hypotheses: ['Less layering may be worth testing.'], proposals: [{ target: 'compiledStyles', targetId: null, before: context.styles, after: 'Sparse piano carrying the melody, with space between phrases.', rationale: 'Test more space while retaining the melodic role.' }] }
+    createCompletion.mockResolvedValue({ choices: [{ message: { content: JSON.stringify(proposal) } }] })
+    const response = await POST(request(context))
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual(proposal)
+    const messages = createCompletion.mock.calls[0][0].messages
+    expect(JSON.parse(messages[1].content)).toEqual(context)
+    expect(messages[0].content).toContain('Authored relationship_notes are authoritative for musical roles')
+    expect(messages[0].content).toContain('Never demote a melodic lead to accompaniment')
+    expect(messages[0].content).toContain('carry their exact wording into the proposed after text')
+    expect(messages[0].content).toContain('If a useful experiment requires changing a preserved role, return no proposal')
+    expect(createCompletion).toHaveBeenCalledOnce()
+  })
+
   it.each(['', 'false', 'TRUE'])('stays disabled with flag %s before quota/provider', async flag => {
     vi.stubEnv('WORKSPACE_ASSIST_ENABLED', flag)
     const req = request()
