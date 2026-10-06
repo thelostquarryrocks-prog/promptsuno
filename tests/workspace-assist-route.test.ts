@@ -106,8 +106,22 @@ describe('guarded workspace assistance', () => {
     createCompletion.mockResolvedValue({ choices: [{ message: { content } }] })
     expect((await POST(request())).status).toBe(502)
   })
-  it('rejects a provider edit to a locked section', async () => {
-    expect((await POST(request({ ...input, preservationGoals: [{ id: 'lock', scope: 'section', targetId: 'v', text: '' }] }))).status).toBe(502)
+  it('rejects a locked Lyrics target before quota/provider', async () => {
+    expect((await POST(request({ ...input, preservationGoals: [{ id: 'lock', scope: 'section', targetId: 'v', text: '' }] }))).status).toBe(400)
+    expect(reserve).not.toHaveBeenCalled(); expect(constructProvider).not.toHaveBeenCalled()
+  })
+  it('still rejects a Doctor provider edit to a locked section', async () => {
+    expect((await POST(request({ ...input, action: 'doctor', reportedProblem: 'The verse feels rushed.', preservationGoals: [{ id: 'lock', scope: 'section', targetId: 'v', text: '' }] }))).status).toBe(502)
+  })
+  it.each(['', '  \n  '])('rejects an empty Doctor report before quota/provider', async reportedProblem => {
+    expect((await POST(request({ ...input, action: 'doctor', reportedProblem }))).status).toBe(400)
+    expect(reserve).not.toHaveBeenCalled(); expect(constructProvider).not.toHaveBeenCalled()
+  })
+  it('permits changing unlocked material while retaining an exact preserved phrase', async () => {
+    const section = { id: 'v', title: 'Verse', text: 'Keep this line\nOld ending' }
+    createCompletion.mockResolvedValue({ choices: [{ message: { content: JSON.stringify({ ...ready, proposals: [{ ...ready.proposals[0], before: section.text, after: 'Keep this line\nNew ending' }] }) } }] })
+    const response = await POST(request({ ...input, sections: [section], preservationGoals: [{ id: 'phrase', scope: 'phrase', targetId: 'v', text: 'Keep this line' }] }))
+    expect(response.status).toBe(200); expect(reserve).toHaveBeenCalledOnce(); expect(createCompletion).toHaveBeenCalledOnce()
   })
   it('keeps the reservation and returns a generic failure on provider errors', async () => {
     createCompletion.mockRejectedValue(new Error('private provider detail'))

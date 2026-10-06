@@ -2,7 +2,7 @@ import { expect, test } from './test'
 import { login } from './login'
 
 test('manual Brain Lyrics Doctor loop preserves exact material and reversible experiments', async ({ page }, testInfo) => {
-  testInfo.annotations.push({ type: 'environment', description: 'Local mocked auth, disabled model assistance; browser emulation, not physical device acceptance.' })
+  testInfo.annotations.push({ type: 'environment', description: 'Local mocked auth/provider; manual flow makes no assistance requests. Browser emulation, not physical device acceptance.' })
   let providerRequests = 0
   page.on('request', request => { if (/\/api\/(generate|workspace-assist)/.test(request.url())) providerRequests++ })
   await login(page)
