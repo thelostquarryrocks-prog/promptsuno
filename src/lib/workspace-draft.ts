@@ -1,6 +1,16 @@
 import { hasExactKeys, isRecord, parseCompilerOutput, type CompilerOutput, type SelectedNode } from './compiler-contract'
 
 export type WorkspaceMode = 'brain' | 'lyrics' | 'doctor'
+export type WorkspaceProposal = {
+  id: string; source: 'user' | 'assistant'; target: 'relationshipNotes' | 'compiledStyles' | 'lyricsSection'
+  targetId: string | null; before: string; after: string; rationale: string
+  status: 'pending' | 'applied' | 'rejected' | 'reverted'; createdAt: string
+}
+export type WorkspaceRevision = {
+  id: string; proposalId: string; target: WorkspaceProposal['target']; targetId: string | null
+  before: string; after: string; createdAt: string
+  compilerBefore: { compiledStyles: string; compilerResult: CompilerOutput | null } | null
+}
 export type WorkspaceDraftV1 = {
   version: 1
   project: { id: string; title: string; createdAt: string; updatedAt: string }
@@ -8,8 +18,8 @@ export type WorkspaceDraftV1 = {
   styleIntent: { selectedNodes: SelectedNode[]; relationshipNotes: string; compiledStyles: string; compilerResult: CompilerOutput | null }
   lyrics: { text: string; sections: { id: string; title: string; text: string }[]; lyricNotes: string }
   preservationGoals: { id: string; scope: 'section' | 'phrase' | 'note'; targetId: string | null; text: string }[]
-  doctor: { reportedProblem: string; symptom: string; hypotheses: string[]; proposedChanges: never[] }
-  revisions: never[]
+  doctor: { reportedProblem: string; symptom: string; hypotheses: string[]; proposedChanges: WorkspaceProposal[] }
+  revisions: WorkspaceRevision[]
 }
 
 // Tab-local by design: refresh survives without allowing another tab to silently
@@ -39,6 +49,9 @@ const ownerValid = (owner: unknown): owner is string => id(owner)
 const timestamp = (value: unknown) => text(value, 40) && /^\d{4}-\d{2}-\d{2}T/.test(value) && Number.isFinite(Date.parse(value))
 const record = (value: unknown, keys: string[]): value is Record<string, unknown> => isRecord(value) && hasExactKeys(value, keys)
 const list = (value: unknown, max: number): value is unknown[] => Array.isArray(value) && value.length <= max
+function validTarget(target: unknown, targetId: unknown): boolean {
+  return target === 'lyricsSection' ? id(targetId) : (target === 'relationshipNotes' || target === 'compiledStyles') && targetId === null
+}
 
 function parseDraft(raw: string, catalog?: SelectedNode[]): WorkspaceDraftV1 {
   if (raw.length > MAX_SERIALIZED_LENGTH) throw new Error('Invalid draft')
@@ -81,7 +94,44 @@ function parseDraft(raw: string, catalog?: SelectedNode[]): WorkspaceDraftV1 {
   }
   if (!record(doctor, ['reportedProblem', 'symptom', 'hypotheses', 'proposedChanges']) || !text(doctor.reportedProblem)
     || !text(doctor.symptom, 8_000) || !list(doctor.hypotheses, 30) || !doctor.hypotheses.every(item => text(item, 8_000))
-    || !list(doctor.proposedChanges, 0) || !list(value.revisions, 0)) return fail()
+    || !list(doctor.proposedChanges, 20) || !list(value.revisions, 20)) return fail()
+  const proposals = new Map<string, WorkspaceProposal>()
+  for (const proposal of doctor.proposedChanges) {
+    if (!record(proposal, ['id', 'source', 'target', 'targetId', 'before', 'after', 'rationale', 'status', 'createdAt'])
+      || !id(proposal.id) || proposals.has(proposal.id) || !['user', 'assistant'].includes(proposal.source as string)
+      || !validTarget(proposal.target, proposal.targetId) || !text(proposal.before) || !text(proposal.after) || !text(proposal.rationale, 8_000)
+      || !['pending', 'applied', 'rejected', 'reverted'].includes(proposal.status as string) || !timestamp(proposal.createdAt)) return fail()
+    proposals.set(proposal.id, proposal as WorkspaceProposal)
+  }
+  const revisions = new Set<string>()
+  const revisedProposals = new Set<string>()
+  for (const revision of value.revisions) {
+    if (!record(revision, ['id', 'proposalId', 'target', 'targetId', 'before', 'after', 'createdAt', 'compilerBefore'])
+      || !id(revision.id) || revisions.has(revision.id) || !id(revision.proposalId) || revisedProposals.has(revision.proposalId)
+      || !validTarget(revision.target, revision.targetId) || !text(revision.before) || !text(revision.after) || !timestamp(revision.createdAt)) return fail()
+    const proposal = proposals.get(revision.proposalId)
+    if (!proposal || !['applied', 'reverted'].includes(proposal.status) || proposal.target !== revision.target || proposal.targetId !== revision.targetId
+      || proposal.before !== revision.before || proposal.after !== revision.after) return fail()
+    if (revision.target === 'relationshipNotes') {
+      if (!record(revision.compilerBefore, ['compiledStyles', 'compilerResult']) || !text(revision.compilerBefore.compiledStyles)) return fail()
+      const result = revision.compilerBefore.compilerResult
+      if (result !== null) {
+        // Historical coverage may refer to earlier node selections.
+        if (!isRecord(result) || !list(result.coverage, 2_000)) return fail()
+        const historicalNodes = result.coverage.map(item => {
+          if (!isRecord(item) || !id(item.node_id)) return fail()
+          return { node_id: item.node_id, label: '', category: '' }
+        })
+        const parsed = parseCompilerOutput(result, historicalNodes)
+        if (!text(parsed.styles) || !parsed.interpretations.every(item => text(item, 8_000)) || !parsed.questions.every(item => text(item, 8_000))) return fail()
+      }
+    } else if (revision.compilerBefore !== null) return fail()
+    revisions.add(revision.id)
+    revisedProposals.add(revision.proposalId)
+  }
+  for (const proposal of proposals.values()) {
+    if (['applied', 'reverted'].includes(proposal.status) && !revisedProposals.has(proposal.id)) return fail()
+  }
   return value as WorkspaceDraftV1
 }
 

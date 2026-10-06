@@ -12,13 +12,14 @@ export type SoundBrainCanvasProps = {
   onCollect: (node: SelectedNode) => void
   onRemove: (nodeId: string) => void
   disabled?: boolean
+  highlightedNodeId?: string | null
 }
 
 const categoryOrder = ['Genre', 'Mood', 'Instrument', 'Vocal', 'Rhythm', 'Texture', 'Production', 'Structure', 'Energy', 'Era']
 const symbols: Record<string, string> = { Genre: '♫', Mood: '◒', Instrument: '♬', Vocal: '◉', Rhythm: '≋', Texture: '✧', Production: '⌘', Structure: '▤', Energy: 'ϟ', Era: '◷' }
 type Drag = { pointer: number; node: SelectedNode; target: HTMLButtonElement; startX: number; startY: number; x: number; y: number; moved: boolean }
 
-export default function SoundBrainCanvas({ discoveryNodes, affinities, selectedNodes, onCollect, onRemove, disabled = false }: SoundBrainCanvasProps) {
+export default function SoundBrainCanvas({ discoveryNodes, affinities, selectedNodes, onCollect, onRemove, disabled = false, highlightedNodeId = null }: SoundBrainCanvasProps) {
   const [category, setCategory] = useState('All')
   const [pending, setPending] = useState<string | null>(null)
   const pendingRef = useRef<string | null>(null)
@@ -167,7 +168,7 @@ export default function SoundBrainCanvas({ discoveryNodes, affinities, selectedN
     </div>
     <div className="brain-tray" aria-label="Collected nodes">
       <div className="brain-tray-heading">SELECTED STYLES <span>({selectedNodes.length})</span></div>
-      <div className="brain-selections">{selectedNodes.length === 0 ? <p>Your mix starts here. Add a style above.</p> : selectedNodes.map(node => <span key={node.node_id} data-node-id={node.node_id} className="brain-selection">
+      <div className="brain-selections">{selectedNodes.length === 0 ? <p>Your mix starts here. Add a style above.</p> : selectedNodes.map(node => <span key={node.node_id} data-node-id={node.node_id} tabIndex={highlightedNodeId === node.node_id ? -1 : undefined} className={`brain-selection${highlightedNodeId === node.node_id ? ' intent-highlight' : ''}`}>
         <span aria-hidden="true">{symbols[node.category] ?? '✦'}</span>{node.label}<button type="button" aria-label={`Remove ${node.label}`} disabled={disabled} onClick={() => onRemove(node.node_id)}>×</button>
       </span>)}</div>
     </div>

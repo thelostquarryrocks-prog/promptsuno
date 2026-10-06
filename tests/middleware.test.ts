@@ -46,4 +46,10 @@ describe('authentication middleware cache and cookie boundaries', () => {
 
     expect(createServerClient.mock.calls[0][2].cookieOptions.secure).toBe(false)
   })
+
+  it('lets the assistance endpoint own verified authentication and JSON errors', async () => {
+    const response = await proxy(new NextRequest('https://staging.example/api/workspace-assist'))
+    expect(response.headers.get('cache-control')).toBe(PRIVATE_CACHE_CONTROL)
+    expect(createServerClient).not.toHaveBeenCalled()
+  })
 })

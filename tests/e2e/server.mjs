@@ -106,6 +106,7 @@ const next = spawn(process.execPath, ['node_modules/next/dist/bin/next', mode, '
     // Always override inherited credentials: browser verification cannot spend money.
     OPENAI_API_KEY: 'local-model-fixture-placeholder',
     OPENAI_BASE_URL: 'http://127.0.0.1:3132/v1',
+    WORKSPACE_ASSIST_ENABLED: 'false',
     NEXT_TELEMETRY_DISABLED: '1',
   },
 })
