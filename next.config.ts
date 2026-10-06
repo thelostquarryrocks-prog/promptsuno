@@ -7,7 +7,7 @@ type WorkboxUrlMatch = {
 };
 
 export function isProtectedPwaRequest({ sameOrigin, url }: WorkboxUrlMatch) {
-  return sameOrigin && /^\/(?:workspace(?:\/|$)|login(?:\/|$)|auth(?:\/|$)|api\/generate(?:\/|$))/.test(url.pathname);
+  return sameOrigin && /^\/(?:workspace(?:\/|$)|login(?:\/|$)|auth(?:\/|$)|api\/(?:generate|workspace-assist)(?:\/|$))/.test(url.pathname);
 }
 
 export const pwaOptions = {

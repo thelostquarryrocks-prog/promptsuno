@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -8,6 +8,13 @@ import { createClient } from '../lib/supabase/client'
 import { parseCompilerOutput, type CompilerOutput, type DiscoveryAffinities, type SelectedNode } from '../lib/compiler-contract'
 import { clearStarterIntent, consumeStarterIntent, hasStarterIntent } from '../lib/starter-intent'
 import { WorkspaceProvider, useWorkspace } from './WorkspaceProvider'
+import ProposalReview from './ProposalReview'
+import WorkspaceAssistance from './WorkspaceAssistance'
+import { createWorkspaceDraft } from '../lib/workspace-draft'
+import './creative-workbench.css'
+
+const LyricsStudio = lazy(() => import('./LyricsStudio'))
+const PromptDoctor = lazy(() => import('./PromptDoctor'))
 
 const SoundBrainCanvas = dynamic(() => import('./SoundBrainCanvas'), {
   ssr: false,
@@ -16,14 +23,15 @@ const SoundBrainCanvas = dynamic(() => import('./SoundBrainCanvas'), {
 
 const focusStyle = 'focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-yellow-300'
 
-export default function Workspace({ discoveryNodes, affinities }: {
+export default function Workspace({ discoveryNodes, affinities, assistanceAvailable = false }: {
   discoveryNodes: SelectedNode[]
   affinities: DiscoveryAffinities
+  assistanceAvailable?: boolean
 }) {
-  return <WorkspaceProvider catalog={discoveryNodes}><WorkspaceTools discoveryNodes={discoveryNodes} affinities={affinities} /></WorkspaceProvider>
+  return <WorkspaceProvider catalog={discoveryNodes}><WorkspaceTools discoveryNodes={discoveryNodes} affinities={affinities} assistanceAvailable={assistanceAvailable} /></WorkspaceProvider>
 }
 
-function WorkspaceTools({ discoveryNodes, affinities }: { discoveryNodes: SelectedNode[]; affinities: DiscoveryAffinities }) {
+function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { discoveryNodes: SelectedNode[]; affinities: DiscoveryAffinities; assistanceAvailable: boolean }) {
   const { draft, update, openAccount, closeAccount, saveStatus, retrySave, recoverSave } = useWorkspace()
   const { selectedNodes, relationshipNotes, compilerResult: result, compiledStyles: output } = draft.styleIntent
   const setSelectedNodes = useCallback((change: (nodes: SelectedNode[]) => SelectedNode[]) => update(current => ({ ...current, styleIntent: { ...current.styleIntent, selectedNodes: change(current.styleIntent.selectedNodes), compilerResult: null, compiledStyles: '' } })), [update])
@@ -35,6 +43,7 @@ function WorkspaceTools({ discoveryNodes, affinities }: { discoveryNodes: Select
   const [copyStatus, setCopyStatus] = useState('')
   const [starterStatus, setStarterStatus] = useState('')
   const [discoverySession, setDiscoverySession] = useState(0)
+  const [intentFocus, setIntentFocus] = useState<{ mode: 'brain' | 'lyrics'; id: string | null } | null>(null)
   const intentWasEdited = useRef(false)
   const workspaceOwner = useRef<string | null | undefined>(undefined)
   const accountRevision = useRef(0)
@@ -42,6 +51,16 @@ function WorkspaceTools({ discoveryNodes, affinities }: { discoveryNodes: Select
   const generateButton = useRef<HTMLButtonElement>(null)
   const restoreGenerateFocus = useRef(false)
   const router = useRouter()
+  const navigateToIntent = useCallback((mode: 'brain' | 'lyrics', id: string | null = null) => {
+    setIntentFocus({ mode, id })
+    update(current => ({ ...current, mode }))
+  }, [update])
+  useEffect(() => {
+    if (draft.mode !== 'brain' || intentFocus?.mode !== 'brain') return
+    const element = intentFocus.id ? document.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(intentFocus.id)}"]`) : document.getElementById('relationship-notes')
+    element?.focus()
+    element?.scrollIntoView?.({ block: 'center', behavior: 'instant' })
+  }, [draft.mode, intentFocus])
 
   useEffect(() => {
     if (isGenerating || !restoreGenerateFocus.current) return
@@ -64,6 +83,7 @@ function WorkspaceTools({ discoveryNodes, affinities }: { discoveryNodes: Select
     const resetIntent = () => {
       accountRevision.current += 1
       setDiscoverySession(value => value + 1)
+      setIntentFocus(null)
       intentWasEdited.current = true
       clearStarterIntent()
       closeAccount()
@@ -88,6 +108,7 @@ function WorkspaceTools({ discoveryNodes, affinities }: { discoveryNodes: Select
       if (!mounted || revision !== accountRevision.current) return
       if (error || !data.session?.user) {
         if (hasStarterIntent()) setStarterStatus('Your starter is still saved in this tab. Refresh to try carrying it over again.')
+        else setStarterStatus('Autosave could not establish this tab’s account. Keep this tab open, export your work, and refresh to retry.')
         return
       }
       if (workspaceOwner.current !== undefined && workspaceOwner.current !== data.session.user.id) {
@@ -108,6 +129,7 @@ function WorkspaceTools({ discoveryNodes, affinities }: { discoveryNodes: Select
       }
     }).catch(() => {
       if (mounted && hasStarterIntent()) setStarterStatus('Your starter is still saved in this tab. Refresh to try carrying it over again.')
+      else if (mounted) setStarterStatus('Autosave could not establish this tab’s account. Keep this tab open, export your work, and refresh to retry.')
     })
     return () => { mounted = false; accountRevision.current += 1; subscription.unsubscribe() }
   }, [closeAccount, openAccount, setRelationshipNotes])
@@ -140,6 +162,8 @@ function WorkspaceTools({ discoveryNodes, affinities }: { discoveryNodes: Select
   const handleGenerate = async () => {
     if (requestInFlight.current || selectedNodes.length === 0) return
     const revision = accountRevision.current
+    const intentSnapshot = JSON.stringify({ nodes: selectedNodes, relationship_notes: relationshipNotes })
+    const songSnapshot = draft.project.id
     restoreGenerateFocus.current = document.activeElement === generateButton.current
     requestInFlight.current = true
     setIsGenerating(true)
@@ -148,7 +172,7 @@ function WorkspaceTools({ discoveryNodes, affinities }: { discoveryNodes: Select
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nodes: selectedNodes, relationship_notes: relationshipNotes }),
+        body: intentSnapshot,
       })
       if (revision !== accountRevision.current) return
       if (response.status === 429) {
@@ -165,11 +189,15 @@ function WorkspaceTools({ discoveryNodes, affinities }: { discoveryNodes: Select
       if (!response.ok) throw new Error('Could not compile your prompt. Your nodes and notes are still here. Please try again.')
       const compiled = parseCompilerOutput(await response.json(), selectedNodes)
       if (revision !== accountRevision.current) return
-      setResult(compiled)
-      setOutput(compiled.styles)
+      update(current => {
+        if (current.project.id !== songSnapshot || JSON.stringify({ nodes: current.styleIntent.selectedNodes, relationship_notes: current.styleIntent.relationshipNotes }) !== intentSnapshot || current.styleIntent.compiledStyles || current.styleIntent.compilerResult) {
+          throw new Error('Your song changed during compilation. Compile again from the current intent.')
+        }
+        return { ...current, styleIntent: { ...current.styleIntent, compilerResult: compiled, compiledStyles: compiled.styles } }
+      })
     } catch (caught) {
       if (revision !== accountRevision.current) return
-      setError(caught instanceof Error && caught.message.startsWith('The compiler returned')
+      setError(caught instanceof Error && (caught.message.startsWith('The compiler returned') || caught.message.startsWith('Your song changed'))
         ? caught.message : 'Could not compile your prompt. Your nodes and notes are still here. Please try again.')
     } finally {
       requestInFlight.current = false
@@ -223,9 +251,10 @@ function WorkspaceTools({ discoveryNodes, affinities }: { discoveryNodes: Select
         </nav>
         {starterStatus && <p role="status" className="text-sm text-gray-300">{starterStatus}</p>}
         <div hidden={draft.mode !== 'brain'} className="space-y-6">
+        {intentFocus?.mode === 'brain' && <p className="intent-spotlight">Review {selectedNodes.find(node => node.node_id === intentFocus.id)?.label || 'your sound notes'} in the context of this song. No sound ideas were added or removed.</p>}
         <section aria-labelledby="sound-brain-heading" className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="sound-brain-heading" className="text-xl font-bold tracking-tight">Sound Brain Collector</h2><Link href="/learn/style-prompts" className={`text-sm text-amber-300 ${focusStyle}`}>Prompting guide →</Link></div>
-          <SoundBrainCanvas key={discoverySession} discoveryNodes={discoveryNodes} affinities={affinities} selectedNodes={selectedNodes} onCollect={collectNode} onRemove={removeNode} disabled={isGenerating} />
+          <SoundBrainCanvas key={discoverySession} discoveryNodes={discoveryNodes} affinities={affinities} selectedNodes={selectedNodes} onCollect={collectNode} onRemove={removeNode} disabled={isGenerating} highlightedNodeId={intentFocus?.mode === 'brain' ? intentFocus.id : null} />
           <p role="status" className="text-sm text-gray-300">{selectedNodes.length === 0 ? 'Collect nodes to begin.' : `${selectedNodes.length} ${selectedNodes.length === 1 ? 'node' : 'nodes'} selected.`}</p>
         </section>
 
@@ -257,7 +286,7 @@ function WorkspaceTools({ discoveryNodes, affinities }: { discoveryNodes: Select
         {isGenerating && <p role="status" className="text-sm text-gray-300">Compiling your selected nodes and notes…</p>}
         {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
 
-        {result?.status === 'ready' && (
+        {(result?.status === 'ready' || output) && (
           <section aria-labelledby="output-heading" className="space-y-3 pb-6">
             <h2 id="output-heading" className="text-sm font-medium text-gray-300">Suno Styles candidate</h2>
             <label htmlFor="styles-output" className="sr-only">Editable Styles prompt</label>
@@ -267,21 +296,24 @@ function WorkspaceTools({ discoveryNodes, affinities }: { discoveryNodes: Select
               <button onClick={handleExport} disabled={!output.trim()} className={`min-h-11 rounded-md border border-gray-600 px-4 text-sm disabled:opacity-50 ${focusStyle}`}>Export Styles</button>
             </div>
             {copyStatus && <p role="status" className="text-sm text-gray-300">{copyStatus}</p>}
-            {result.interpretations.length > 0 && <ul className="list-disc space-y-1 pl-5 text-sm text-gray-300">{result.interpretations.map((item, index) => <li key={index}>{item}</li>)}</ul>}
+            {!!result?.interpretations.length && <ul className="list-disc space-y-1 pl-5 text-sm text-gray-300">{result.interpretations.map((item, index) => <li key={index}>{item}</li>)}</ul>}
           </section>
         )}
         </div>
-        {draft.mode !== 'brain' && <section className="song-surface space-y-4" aria-labelledby="mode-heading">
-          <h2 id="mode-heading" className="text-xl font-bold">{draft.mode === 'lyrics' ? 'Lyrics Studio' : 'Prompt Doctor'}</h2>
-          <p className="text-gray-300">{draft.mode === 'lyrics' ? 'The words and structure of this song.' : 'What missed when you listened?'}</p>
-          <p className="text-sm text-gray-400">Your sound intent is already here. This workbench is being connected next.</p>
-        </section>}
+        <Suspense fallback={<p role="status">Opening your workbench…</p>}>
+          {draft.mode === 'lyrics' && <div key={`lyrics-${draft.project.id}`} className="space-y-6"><LyricsStudio focusSectionId={intentFocus?.mode === 'lyrics' ? intentFocus.id : null} /><WorkspaceAssistance action="lyrics" available={assistanceAvailable} targetId={intentFocus?.mode === 'lyrics' ? intentFocus.id : draft.lyrics.sections[0]?.id || null} /><ProposalReview onNavigate={navigateToIntent} /></div>}
+          {draft.mode === 'doctor' && <PromptDoctor key={`doctor-${draft.project.id}`} onNavigate={navigateToIntent} assistanceAvailable={assistanceAvailable} />}
+        </Suspense>
+        {draft.mode === 'brain' && <ProposalReview onNavigate={navigateToIntent} />}
         <details className="song-dock">
           <summary>{draft.project.title || 'Untitled song'} · {selectedNodes.length} sound ideas · {draft.lyrics.text ? 'Lyrics draft' : 'No lyrics yet'}</summary>
           <div className="space-y-3 pt-4 text-sm">
             <p><strong>Sound:</strong> {selectedNodes.map(node => node.label).join(' · ') || 'Collect your first idea in Brain.'}</p>
             <p className="whitespace-pre-wrap"><strong>Intent:</strong> {relationshipNotes || 'No relationship notes yet.'}</p>
             <p><strong>Lyrics:</strong> {draft.lyrics.sections.map(section => section.title).join(' · ') || 'No sections yet.'}</p>
+            <p><strong>Preserved:</strong> {draft.preservationGoals.map(goal => goal.text).join(' · ') || 'Nothing locked yet.'}</p>
+            {draft.doctor.reportedProblem && <p className="whitespace-pre-wrap"><strong>What missed:</strong> {draft.doctor.reportedProblem}</p>}
+            <details><summary>Bring existing Styles into this song</summary><label htmlFor="import-styles">Existing Styles output</label><textarea id="import-styles" rows={3} maxLength={64000} value={output} onChange={event => { setResult(null); setOutput(event.target.value) }} className="w-full rounded-xl border border-gray-600 bg-[#0f171c] p-3" /><p className="text-gray-400">This edits the output only. Your selected sound ideas and notes stay structured.</p></details>
             <p className="text-gray-400">Local to this browser tab and account. No cloud sync.</p>
             <button className={`min-h-11 text-amber-300 ${focusStyle}`} onClick={() => {
               try {
@@ -293,6 +325,13 @@ function WorkspaceTools({ discoveryNodes, affinities }: { discoveryNodes: Select
                 setTimeout(() => URL.revokeObjectURL(url), 1000)
               } catch { setError('Could not export your song. Keep this tab open and copy your work manually.') }
             }}>Export song backup</button>
+            <button disabled={isGenerating} className={`min-h-11 text-amber-300 ${focusStyle}`} onClick={() => {
+              if (!window.confirm('Start a new song? This replaces the current local song and its revision history. Export a song backup first to keep it.')) return
+              update(() => createWorkspaceDraft())
+              setIntentFocus(null)
+              setDiscoverySession(value => value + 1)
+              setError(''); setStarterStatus(''); setCopyStatus('')
+            }}>Start a new song</button>
             {saveStatus.startsWith('Saved song could not') && <div className="space-y-2">
               <p>The unreadable saved copy is protected. Export the current song first. Replacing it discards the unreadable copy.</p>
               <button onClick={recoverSave} className={`min-h-11 text-amber-300 ${focusStyle}`}>Replace unreadable copy with this song</button>

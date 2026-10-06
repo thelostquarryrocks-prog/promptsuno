@@ -6,7 +6,7 @@ import { getSupabaseCookieOptions, usesSecureCookies } from './lib/supabase/cook
 export const PRIVATE_CACHE_CONTROL = 'private, no-store'
 
 export function isProtectedPathname(pathname: string) {
-  return /^\/(?:workspace(?:\/|$)|login(?:\/|$)|auth(?:\/|$)|api\/generate(?:\/|$))/.test(pathname)
+  return /^\/(?:workspace(?:\/|$)|login(?:\/|$)|auth(?:\/|$)|api\/(?:generate|workspace-assist)(?:\/|$))/.test(pathname)
 }
 
 function applyResponseBoundaries(response: NextResponse, pathname: string) {
@@ -20,7 +20,7 @@ function applyResponseBoundaries(response: NextResponse, pathname: string) {
 export async function proxy(request: NextRequest) {
   // The paid route owns verification and JSON failures, including config outages.
   // Avoid a second auth/refresh attempt or middleware redirect before its guard.
-  if (request.nextUrl.pathname === '/api/generate') {
+  if (['/api/generate', '/api/workspace-assist'].includes(request.nextUrl.pathname)) {
     return applyResponseBoundaries(NextResponse.next({ request }), request.nextUrl.pathname)
   }
 

@@ -14,6 +14,7 @@ describe('protected cache policy', () => {
     '/login',
     '/auth/callback',
     '/api/generate',
+    '/api/workspace-assist',
   ])('keeps %s inside both HTTP and PWA protection boundaries', pathname => {
     expect(isProtectedPathname(pathname)).toBe(true)
     expect(pwaMatch(pathname)).toBe(true)
