@@ -36,6 +36,19 @@ beforeEach(() => {
 })
 
 describe('existing Luna compiler API', () => {
+  it('keeps an instrument palette separate from unspecified vocal intent in provider guidance', async () => {
+    const palette = { nodes: [nodes[0]], relationship_notes: 'Use only piano. Keep the texture sparse.' }
+    const result = { ...ready, styles: 'Sparse piano.', coverage: [{ node_id: 'piano', status: 'preserved' }] }
+    createCompletion.mockResolvedValue({ choices: [{ message: { content: JSON.stringify(result) } }] })
+    expect((await POST(request(palette))).status).toBe(200)
+    const messages = createCompletion.mock.calls[0][0].messages
+    expect(JSON.parse(messages.find((message: { role: string }) => message.role === 'user').content)).toEqual(palette)
+    const guidance = messages.filter((message: { role: string }) => message.role !== 'user').map((message: { content: string }) => message.content).join('\n')
+    expect(guidance).toContain('An instrument-only palette restriction does not establish instrumental/no-vocals intent.')
+    expect(guidance).toContain('If vocal intent is unspecified, leave it unspecified')
+    expect(createCompletion).toHaveBeenCalledOnce()
+  })
+
   it('forwards only exact nodes and authored notes to gpt-5.6-luna with the strict schema', async () => {
     createCompletion.mockResolvedValue({ choices: [{ message: { content: JSON.stringify(ready) } }] })
     const response = await POST(request(input))
