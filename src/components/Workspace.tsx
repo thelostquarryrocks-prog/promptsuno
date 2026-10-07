@@ -53,6 +53,16 @@ function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { d
   const generateButton = useRef<HTMLButtonElement>(null)
   const songDrawer = useRef<HTMLDialogElement>(null)
   const songTrigger = useRef<HTMLButtonElement>(null)
+  const navigation = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const viewport = window.visualViewport
+    if (!viewport) return
+    const position = () => navigation.current?.style.setProperty('--keyboard-inset', `${Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)}px`)
+    position()
+    viewport.addEventListener('resize', position)
+    viewport.addEventListener('scroll', position)
+    return () => { viewport.removeEventListener('resize', position); viewport.removeEventListener('scroll', position) }
+  }, [])
   const restoreGenerateFocus = useRef(false)
   const router = useRouter()
   const navigateToIntent = useCallback((mode: 'brain' | 'lyrics', id: string | null = null) => {
@@ -250,7 +260,7 @@ function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { d
           <p role="status" className="text-xs text-gray-400">{saveStatus}</p>
           {saveStatus.startsWith('Not saved') && <button onClick={retrySave} className={`text-sm text-amber-300 ${focusStyle}`}>Retry autosave</button>}
         </div>
-        <div className="workspace-navigation">
+        <div ref={navigation} className="workspace-navigation">
           <nav aria-label="Song tools" className="song-modes">
             {(['brain', 'lyrics', 'doctor'] as const).map(mode => <button key={mode} aria-current={draft.mode === mode ? 'page' : undefined} onClick={() => update(current => ({ ...current, mode }))}><WorkspaceIcon name={mode} />{mode === 'brain' ? 'Brain' : mode === 'lyrics' ? 'Lyrics' : 'Doctor'}</button>)}
           </nav>
