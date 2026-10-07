@@ -253,18 +253,20 @@ function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { d
         <h1 className="text-2xl font-extrabold tracking-tighter"><Link href="/" className={focusStyle}>Prompt<span className="text-[#ff702b]">Suno</span></Link></h1>
         <button onClick={handleSignOut} disabled={isGenerating} className={`min-h-11 px-2 text-sm text-gray-300 hover:text-white ${focusStyle}`}>Sign Out</button>
       </header>
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-4 pt-7 sm:p-6">
         <div className="song-identity">
+          <div className="song-identity-fields">
           <label htmlFor="song-title" className="sr-only">Song title</label>
           <input id="song-title" value={draft.project.title} maxLength={120} onChange={event => update(current => ({ ...current, project: { ...current.project, title: event.target.value } }))} className="song-title" />
           <p role="status" className="text-xs text-gray-400">{saveStatus}</p>
           {saveStatus.startsWith('Not saved') && <button onClick={retrySave} className={`text-sm text-amber-300 ${focusStyle}`}>Retry autosave</button>}
+          </div>
+          <button ref={songTrigger} className="song-drawer-trigger" aria-haspopup="dialog" onClick={() => songDrawer.current?.showModal()}><WorkspaceIcon name="song" /><span>Song drawer<small>Context · saved material</small></span><span aria-hidden="true">⌄</span></button>
         </div>
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-4 pt-7 sm:p-6">
         <div ref={navigation} className="workspace-navigation">
           <nav aria-label="Song tools" className="song-modes">
             {(['brain', 'lyrics', 'doctor'] as const).map(mode => <button key={mode} aria-current={draft.mode === mode ? 'page' : undefined} onClick={() => update(current => ({ ...current, mode }))}><WorkspaceIcon name={mode} />{mode === 'brain' ? 'Brain' : mode === 'lyrics' ? 'Lyrics' : 'Doctor'}</button>)}
           </nav>
-          <button ref={songTrigger} className="song-drawer-trigger" aria-haspopup="dialog" onClick={() => songDrawer.current?.showModal()}><WorkspaceIcon name="song" /><span>Song drawer<small>Context · saved material</small></span><span aria-hidden="true">↗</span></button>
         </div>
         <WorkspaceHint id="song">One song, three tools. Open <b>Song drawer</b> for your sound context, preserved material and backup.</WorkspaceHint>
         {starterStatus && <p role="status" className="text-sm text-gray-300">{starterStatus}</p>}
