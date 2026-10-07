@@ -1,8 +1,11 @@
 # PromptSuno System Architecture
 
-**Document version:** 1.0 · **Evidence cutoff:** 7 October 2026, UTC  
-**Audience:** engineers, technical leads, product owners and operational reviewers  
-**Implementation snapshot:** `3d8ae6457a2b02c413d6275e130fae944452f549` (PR16, unreleased stack)  
+**Document version:** 1.0 · **Evidence cutoff:** 7 October 2026, UTC
+
+**Audience:** engineers, technical leads, product owners and operational reviewers
+
+**Implementation snapshot:** `3d8ae6457a2b02c413d6275e130fae944452f549` (PR16, unreleased stack)
+
 **Companions:** [Developer handoff](../onboarding/Developer-Handoff.md) · [Evidence and audit index](../reference/Architecture-Evidence-Index.md)
 
 ## 1. Scope and reading conventions

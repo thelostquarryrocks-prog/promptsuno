@@ -1,8 +1,11 @@
 # PromptSuno Developer Handoff
 
-**Version:** 1.0 · **Prepared:** 7 October 2026, UTC  
-**For:** developers joining the project and maintainers resuming work  
-**Code baseline:** `3d8ae6457a2b02c413d6275e130fae944452f549`  
+**Version:** 1.0 · **Prepared:** 7 October 2026, UTC
+
+**For:** developers joining the project and maintainers resuming work
+
+**Code baseline:** `3d8ae6457a2b02c413d6275e130fae944452f549`
+
 **Companions:** [System architecture](../architecture/System-Architecture.md) · [Evidence index](../reference/Architecture-Evidence-Index.md)
 
 ## 1. Goal and current status
