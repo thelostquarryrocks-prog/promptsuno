@@ -34,6 +34,14 @@ export function getSoundBrainDiscovery() {
   return { nodes, affinities }
 }
 
+// Plain alternative spellings ("80s", "horns", "lofi") used only for local
+// suggestion matching in the browser. Provenance and evidence stay on the server.
+export function getSoundBrainMentionAliases(): Record<string, string[]> {
+  const aliases: Record<string, string[]> = {}
+  for (const term of catalog.terms) if (term.aliases.length) aliases[term.id] = [...term.aliases]
+  return aliases
+}
+
 export function resolveCompilerInput(value: unknown): CompilerInput {
   if (!isRecord(value) || !hasExactKeys(value, ['nodes', 'relationship_notes'])
     || !Array.isArray(value.nodes) || value.nodes.length === 0 || value.nodes.length > catalogById.size

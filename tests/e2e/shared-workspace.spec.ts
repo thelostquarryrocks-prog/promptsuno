@@ -10,7 +10,7 @@ test('one local song retains exact Brain intent and edited Styles through modes 
   await page.getByRole('button', { name: 'Collect Piano', exact: true }).click()
   const notes = '  Piano leads.\nKeep the contrast exactly.  '
   const edited = '  Edited foreground piano.\nLeave the ending open.  '
-  await page.getByLabel('Relationship notes').fill(notes)
+  await page.getByLabel('Describe your song').fill(notes)
   let calls = 0
   await page.route('**/api/generate', async route => {
     calls++
@@ -22,12 +22,12 @@ test('one local song retains exact Brain intent and edited Styles through modes 
   await page.getByRole('button', { name: 'Lyrics', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Lyrics Studio', exact: true })).toBeVisible()
   await expect(page.getByTestId('brain-orb')).toBeHidden()
-  await page.getByRole('button', { name: 'Doctor', exact: true }).click()
+  await page.getByRole('button', { name: 'Fix', exact: true }).click()
   await page.reload()
-  await expect(page.getByRole('button', { name: 'Doctor', exact: true })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('button', { name: 'Fix', exact: true })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByLabel('Song title')).toHaveValue('Quiet windows')
-  await page.getByRole('button', { name: 'Brain', exact: true }).click()
-  await expect(page.getByLabel('Relationship notes')).toHaveValue(notes)
+  await page.getByRole('button', { name: 'Sound', exact: true }).click()
+  await expect(page.getByLabel('Describe your song')).toHaveValue(notes)
   await expect(page.getByLabel('Editable Styles prompt')).toHaveValue(edited)
   await expect(page.locator('[data-node-id="piano"]')).toHaveCount(1)
   expect(calls).toBe(1)
@@ -38,6 +38,6 @@ test('one local song retains exact Brain intent and edited Styles through modes 
   await expect(page).toHaveURL(/\/login$/)
   expect(await page.evaluate(() => Object.keys(sessionStorage).filter(key => key.startsWith('promptsuno:workspace:')))).toEqual([])
   await login(page)
-  await expect(page.getByLabel('Relationship notes')).toHaveValue('')
+  await expect(page.getByLabel('Describe your song')).toHaveValue('')
   await expect(page.getByLabel('Editable Styles prompt')).toHaveCount(0)
 })

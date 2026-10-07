@@ -56,7 +56,7 @@ test('quota and provider errors retain intent and show retry guidance in the rea
   await expect(page).toHaveURL(/\/workspace$/, { timeout: 30_000 })
   await page.getByText('Choose nodes without dragging').click()
   await page.getByRole('button', { name: 'Collect Piano', exact: true }).click()
-  await page.getByLabel('Relationship notes').fill(input.relationship_notes)
+  await page.getByLabel('Describe your song').fill(input.relationship_notes)
   // This case exercises real HTTP reservations and UI feedback, not animation.
   // Hold unrelated software-rendered frames; server deadlines stay wall-clock.
   // pauseAt fast-forwards due timers once rather than waiting a real minute.
@@ -78,7 +78,7 @@ test('quota and provider errors retain intent and show retry guidance in the rea
   expect(response.headers()['retry-after']).toBe('60')
   expect(response.headers()['cache-control']).toBe('private, no-store')
   await expect(page.getByRole('main').getByRole('alert')).toContainText('Try again in 60 seconds')
-  await expect(page.getByLabel('Relationship notes')).toHaveValue(input.relationship_notes)
+  await expect(page.getByLabel('Describe your song')).toHaveValue(input.relationship_notes)
   await expect(page.getByRole('button', { name: 'Remove Piano' })).toBeEnabled()
   await expect(generate).toBeFocused()
   expect(await stats()).toMatchObject({ modelCalls: before + 1, quotaUsed: 1 })

@@ -1,7 +1,7 @@
 import { expect, test } from './test'
 import { readFile } from 'node:fs/promises'
 import type { CompilerInput } from '../../src/lib/compiler-contract'
-import { login } from './login'
+import { login, revealSoundScene } from './login'
 
 const nodes = [
   { node_id: 'aggressive', label: 'Aggressive', category: 'Energy' },
@@ -31,7 +31,7 @@ test('selection, authored notes, loading, error retry, and clarification preserv
     await expect(page.locator(`[data-node-id="${node.node_id}"]`)).toContainText(node.label)
     await expect(page.getByRole('button', { name: `Collect ${node.label}`, exact: true })).toBeDisabled()
   }
-  await page.getByLabel('Relationship notes').fill(notes)
+  await page.getByLabel('Describe your song').fill(notes)
   const submitted: CompilerInput[] = []
   let release!: () => void
   let call = 0
@@ -49,8 +49,8 @@ test('selection, authored notes, loading, error retry, and clarification preserv
   })
   await page.getByRole('button', { name: 'Generate Prompt' }).click()
   await expect(page.getByRole('button', { name: 'Crafting Prompt…' })).toBeDisabled()
-  await expect(page.getByLabel('Relationship notes')).toHaveValue(notes)
-  await expect(page.getByLabel('Relationship notes')).toBeDisabled()
+  await expect(page.getByLabel('Describe your song')).toHaveValue(notes)
+  await expect(page.getByLabel('Describe your song')).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Remove Piano' })).toBeDisabled()
   await expect.poll(() => submitted.length).toBe(1)
   release()
@@ -60,7 +60,7 @@ test('selection, authored notes, loading, error retry, and clarification preserv
   await page.getByRole('button', { name: 'Generate Prompt' }).click()
   await expect(page.getByText('Should the foreground piano be dry or reverberant?')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Export Styles' })).toHaveCount(0)
-  await page.getByLabel('Relationship notes').fill(`${notes}\nKeep foreground piano dry.`)
+  await page.getByLabel('Describe your song').fill(`${notes}\nKeep foreground piano dry.`)
   await page.getByRole('button', { name: 'Compile with clarification' }).click()
   await expect(page.getByLabel('Editable Styles prompt')).toHaveValue(styles)
   expect(submitted).toEqual([
@@ -78,7 +78,7 @@ test('edited Styles copy/export and keyboard removal preserve authored notes', a
   await login(page)
   await page.getByText('Choose nodes without dragging').click()
   for (const node of nodes) await page.getByRole('button', { name: `Collect ${node.label}`, exact: true }).click()
-  await page.getByLabel('Relationship notes').fill(`${notes}\nKeep foreground piano dry.`)
+  await page.getByLabel('Describe your song').fill(`${notes}\nKeep foreground piano dry.`)
   await page.route('**/api/generate', async route => {
     expect(route.request().postDataJSON()).toEqual({ nodes, relationship_notes: `${notes}\nKeep foreground piano dry.` })
     await route.fulfill({ json: { version: '1.0.0', status: 'ready', styles, coverage: nodes.map(node => ({ node_id: node.node_id, status: 'preserved' })), interpretations: [], questions: [] } })
@@ -116,7 +116,7 @@ test('edited Styles copy/export and keyboard removal preserve authored notes', a
   await page.keyboard.press('Enter')
   await expect(page.getByText('2 nodes selected.')).toBeVisible()
   await expect(page.getByLabel('Editable Styles prompt')).toHaveCount(0)
-  await expect(page.getByLabel('Relationship notes')).toHaveValue(`${notes}\nKeep foreground piano dry.`)
+  await expect(page.getByLabel('Describe your song')).toHaveValue(`${notes}\nKeep foreground piano dry.`)
   expect(errors).toEqual([])
 })
 
@@ -124,7 +124,7 @@ test('network and malformed-output errors preserve intent and never expose copy/
   await login(page)
   await page.getByText('Choose nodes without dragging').click()
   await page.getByRole('button', { name: 'Collect Piano', exact: true }).click()
-  await page.getByLabel('Relationship notes').fill('Piano leads.')
+  await page.getByLabel('Describe your song').fill('Piano leads.')
   await page.route('**/api/generate', route => route.abort('failed'))
   await page.getByRole('button', { name: 'Generate Prompt' }).click()
   await expect(page.getByRole('main').getByRole('alert')).toBeVisible()
@@ -133,13 +133,14 @@ test('network and malformed-output errors preserve intent and never expose copy/
   await page.getByRole('button', { name: 'Generate Prompt' }).click()
   await expect(page.getByRole('main').getByRole('alert')).toContainText('invalid result')
   await expect(page.getByRole('button', { name: 'Remove Piano' })).toBeEnabled()
-  await expect(page.getByLabel('Relationship notes')).toHaveValue('Piano leads.')
+  await expect(page.getByLabel('Describe your song')).toHaveValue('Piano leads.')
   await expect(page.getByRole('button', { name: 'Copy to Clipboard' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Export Styles' })).toHaveCount(0)
 })
 
 test('real pointer drag collects a catalog record and synchronizes removal', async ({ page }, testInfo) => {
   await login(page)
+  await revealSoundScene(page)
   const node = page.locator('[data-stream-node]').first()
   await node.scrollIntoViewIfNeeded()
   const box = (await node.boundingBox())!

@@ -14,3 +14,12 @@ export async function login(page: Page) {
   await expect(page.getByText('Choose nodes without dragging')).toBeVisible({ timeout: 30_000 })
   await expect(page.getByTestId('sound-brain-scene')).toBeVisible({ timeout: 30_000 })
 }
+
+// The Sound step now opens with the song description above the collector, so the
+// drifting nodes start below the fold. Scroll to the scene and point at it, as a
+// person would; pointing pauses the drift so drags aim at a stable node.
+export async function revealSoundScene(page: Page) {
+  const scene = page.getByTestId('sound-brain-scene')
+  await scene.scrollIntoViewIfNeeded()
+  await scene.hover()
+}

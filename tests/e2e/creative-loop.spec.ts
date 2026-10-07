@@ -9,7 +9,7 @@ test('manual Brain Lyrics Doctor loop preserves exact material and reversible ex
   await page.getByText('Choose nodes without dragging').click()
   await page.getByRole('button', { name: 'Collect Piano', exact: true }).click()
   const intent = '  Piano leads.\nKeep space for the words.  '
-  await page.getByLabel('Relationship notes').fill(intent)
+  await page.getByLabel('Describe your song').fill(intent)
   await page.screenshot({ path: testInfo.outputPath('workspace-creative-loop-local-mocked-auth-brain.png'), fullPage: true })
   await page.getByRole('button', { name: 'Lyrics', exact: true }).click()
   await page.getByRole('button', { name: '+ Verse', exact: true }).click()
@@ -21,7 +21,7 @@ test('manual Brain Lyrics Doctor loop preserves exact material and reversible ex
   await page.getByLabel('Exact phrase to keep', { exact: true }).fill('Keep my phrase')
   await page.getByRole('button', { name: 'Preserve phrase', exact: true }).click()
   await page.screenshot({ path: testInfo.outputPath('workspace-creative-loop-local-mocked-auth-lyrics.png'), fullPage: true })
-  await page.getByRole('button', { name: 'Doctor', exact: true }).click()
+  await page.getByRole('button', { name: 'Fix', exact: true }).click()
   await page.getByRole('button', { name: 'Lyrics issue', exact: true }).click()
   await page.getByLabel('What did you hear, and what did you want instead?').fill('The verse ending felt crowded.')
   await page.getByText('Plan your own small experiment', { exact: true }).click()
@@ -39,13 +39,13 @@ test('manual Brain Lyrics Doctor loop preserves exact material and reversible ex
   await expect(page.getByLabel('Chorus lyrics', { exact: true })).toHaveValue('The chorus remains')
   await page.getByRole('button', { name: 'Revert this change', exact: true }).click()
   await expect(page.getByLabel('Verse lyrics', { exact: true })).toHaveValue('Keep my phrase\nOld ending')
-  await page.getByRole('button', { name: 'Brain', exact: true }).click()
-  await expect(page.getByLabel('Relationship notes')).toHaveValue(intent)
+  await page.getByRole('button', { name: 'Sound', exact: true }).click()
+  await expect(page.getByLabel('Describe your song')).toHaveValue(intent)
   await expect(page.locator('[data-node-id="piano"]')).toHaveCount(1)
   expect(new URL(page.url()).search).toBe('')
   expect(providerRequests).toBe(0)
   await page.setViewportSize({ width: 320, height: 800 })
-  for (const mode of ['Brain', 'Lyrics', 'Doctor']) {
+  for (const mode of ['Sound', 'Lyrics', 'Send to Suno', 'Fix']) {
     await page.getByRole('button', { name: mode, exact: true }).click()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   }

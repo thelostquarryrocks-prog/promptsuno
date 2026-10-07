@@ -24,7 +24,7 @@ test('homepage starter survives login reload, stays authored, and is never repla
   expect(await page.evaluate(key => JSON.parse(sessionStorage.getItem(key)!).text, STARTER_INTENT_STORAGE_KEY)).toBe(text)
   await page.reload()
   await login(page)
-  await expect(page.getByLabel('Relationship notes')).toHaveValue(notes)
+  await expect(page.getByLabel('Describe your song')).toHaveValue(notes)
   await expect(page.getByRole('button', { name: 'Generate Prompt' })).toBeDisabled()
   await expect(page.getByText('Collect nodes to begin.')).toBeVisible()
   expect(await page.evaluate(key => sessionStorage.getItem(key), STARTER_INTENT_STORAGE_KEY)).toBeNull()
@@ -32,15 +32,15 @@ test('homepage starter survives login reload, stays authored, and is never repla
   expect(urls.some(url => url.includes(encodeURIComponent(text)) || url.includes('Piano%20leads'))).toBe(false)
 
   const edited = 'Keep this newer workspace direction.'
-  await page.getByLabel('Relationship notes').fill(edited)
+  await page.getByLabel('Describe your song').fill(edited)
   await page.goBack()
   await expect(page).toHaveURL(/\/login$/)
   await page.goForward()
   await expect(page).toHaveURL(/\/workspace$/)
   // Existing routing may retain or remount the workspace. Full draft persistence
   // is not part of this handoff, but the consumed starter must never replay.
-  await expect(page.getByLabel('Relationship notes')).not.toHaveValue(notes)
-  expect(['', edited]).toContain(await page.getByLabel('Relationship notes').inputValue())
+  await expect(page.getByLabel('Describe your song')).not.toHaveValue(notes)
+  expect(['', edited]).toContain(await page.getByLabel('Describe your song').inputValue())
 
   // Even a newly pending local starter must be discarded when signing out.
   await page.evaluate(key => sessionStorage.setItem(key, JSON.stringify({
@@ -50,7 +50,7 @@ test('homepage starter survives login reload, stays authored, and is never repla
   await expect(page).toHaveURL(/\/login$/)
   expect(await page.evaluate(key => sessionStorage.getItem(key), STARTER_INTENT_STORAGE_KEY)).toBeNull()
   await login(page)
-  await expect(page.getByLabel('Relationship notes')).toHaveValue('')
+  await expect(page.getByLabel('Describe your song')).toHaveValue('')
   expect(compilerRequests).toEqual([])
 })
 
@@ -63,7 +63,7 @@ test('signed-in homepage starter reaches workspace directly without generating o
   page.on('request', request => { if (new URL(request.url()).pathname === '/api/generate') requests += 1 })
   await page.getByRole('button', { name: 'Build Prompt', exact: true }).click()
   await expect(page).toHaveURL(/\/workspace$/)
-  await expect(page.getByLabel('Relationship notes')).toHaveValue(`${text}\n\nExample directions: Warm vocals`)
+  await expect(page.getByLabel('Describe your song')).toHaveValue(`${text}\n\nExample directions: Warm vocals`)
   await expect(page.getByRole('button', { name: 'Generate Prompt' })).toBeDisabled()
   expect(requests).toBe(0)
   await page.goBack()
@@ -78,7 +78,7 @@ test('login cannot attach a starter owned by another account', async ({ page }) 
     version: 1, text: 'Other account idea.', examples: ['Cinematic'], createdAt: Date.now(), ownerId: 'different-fixture-account',
   })), STARTER_INTENT_STORAGE_KEY)
   await login(page)
-  await expect(page.getByLabel('Relationship notes')).toHaveValue('')
+  await expect(page.getByLabel('Describe your song')).toHaveValue('')
   expect(await page.evaluate(key => sessionStorage.getItem(key), STARTER_INTENT_STORAGE_KEY)).toBeNull()
 })
 
@@ -88,7 +88,7 @@ test('expired starter is not revived by a successful login', async ({ page }) =>
     version: 1, text: 'Expired idea.', examples: [], createdAt: Date.now() - ttl, ownerId: null,
   })), { key: STARTER_INTENT_STORAGE_KEY, ttl: STARTER_INTENT_TTL_MS })
   await login(page)
-  await expect(page.getByLabel('Relationship notes')).toHaveValue('')
+  await expect(page.getByLabel('Describe your song')).toHaveValue('')
   expect(await page.evaluate(key => sessionStorage.getItem(key), STARTER_INTENT_STORAGE_KEY)).toBeNull()
 })
 
