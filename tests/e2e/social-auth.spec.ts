@@ -1,0 +1,46 @@
+import {test,expect} from './test'
+import {STARTER_INTENT_STORAGE_KEY} from '../../src/lib/starter-intent'
+
+test.beforeEach(async({request})=>{await request.post('http://127.0.0.1:3132/__fixture/oauth?mode=normal');await request.post('http://127.0.0.1:3132/__fixture/account?second=0')})
+test.afterEach(async({page,request})=>{await page.goto('about:blank');await request.post('http://127.0.0.1:3132/__fixture/oauth?mode=normal');await request.post('http://127.0.0.1:3132/__fixture/account?second=0')})
+for(const provider of ['Google','Facebook'])test(`${provider} mock PKCE round trip retains the same-tab starter and private route boundaries`,async({page,context})=>{
+  const urls:string[]=[];page.on('request',request=>urls.push(request.url()))
+  await page.goto('/')
+  await page.getByLabel('Describe the song you hear').fill('Private piano leads the song.')
+  await page.getByRole('button',{name:'Build Prompt',exact:true}).click()
+  const button=page.getByRole('button',{name:`${provider === 'Google' ? 'Sign in with' : 'Continue with'} ${provider}`})
+  await expect(button).toBeEnabled();await button.click()
+  await expect(page).toHaveURL(/\/workspace$/)
+  await expect(page.getByLabel('Relationship notes')).toHaveValue('Private piano leads the song.')
+  expect(await page.evaluate(key=>sessionStorage.getItem(key),STARTER_INTENT_STORAGE_KEY)).toBeNull()
+  expect(urls.some(url=>url.includes('Private')||url.includes('piano'))).toBe(false)
+  expect((await context.cookies()).some(cookie=>cookie.name==='promptsuno-oauth-flow')).toBe(false)
+  const response=await page.reload();expect(response?.headers()['cache-control']).toBe('private, no-store')
+  await expect(page.getByLabel('Relationship notes')).toHaveValue('Private piano leads the song.')
+})
+test('cancelled social login preserves the starter and unconfigured providers stay honest',async({page,request})=>{
+  await request.post('http://127.0.0.1:3132/__fixture/oauth?mode=cancel')
+  await page.goto('/login')
+  await page.evaluate(key=>sessionStorage.setItem(key,JSON.stringify({version:1,text:'Still mine.',examples:[],createdAt:Date.now(),ownerId:null})),STARTER_INTENT_STORAGE_KEY)
+  await expect(page.getByRole('button',{name:'Sign in with Google'})).toBeEnabled()
+  await page.getByRole('button',{name:'Sign in with Google'}).click()
+  await expect(page.getByRole('alert').filter({hasText:'Social sign-in was cancelled.'})).toBeVisible()
+  expect(await page.evaluate(key=>JSON.parse(sessionStorage.getItem(key)!).text,STARTER_INTENT_STORAGE_KEY)).toBe('Still mine.')
+  for(const mode of ['disabled','signup-drift']){
+    await request.post(`http://127.0.0.1:3132/__fixture/oauth?mode=${mode}`);await page.reload()
+    await expect(page.getByRole('button',{name:'Sign in with Google'})).toBeDisabled()
+    await expect(page.getByRole('button',{name:'Continue with Facebook'})).toBeDisabled()
+    await expect(page.getByRole('button',{name:'Create account',exact:true})).toHaveCount(0)
+  }
+})
+test('callback ignores hostile destinations and does not adopt another account’s starter',async({page,request})=>{
+  const denied=await request.get('/auth/callback?code=invalid&next=https://attacker.invalid',{maxRedirects:0})
+  expect(denied.headers().location).toContain('/login?auth_error=expired')
+  expect(denied.headers()['cache-control']).toBe('private, no-store')
+  await page.goto('/login')
+  await page.evaluate(key=>sessionStorage.setItem(key,JSON.stringify({version:1,text:'Other account private song.',examples:[],createdAt:Date.now(),ownerId:'00000000-0000-4000-8000-000000000002'})),STARTER_INTENT_STORAGE_KEY)
+  await expect(page.getByRole('button',{name:'Continue with Facebook'})).toBeEnabled()
+  await page.getByRole('button',{name:'Continue with Facebook'}).click()
+  await expect(page).toHaveURL(/\/workspace$/)
+  await expect(page.getByLabel('Relationship notes')).toHaveValue('')
+})

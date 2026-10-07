@@ -15,6 +15,26 @@ async function signInFixture(context: BrowserContext, request: APIRequestContext
 test.afterEach(async ({ page, request }) => {
   await page.goto('about:blank', { waitUntil: 'commit', timeout: 10_000 })
   await request.post('http://127.0.0.1:3132/__fixture/quota')
+  await request.post('http://127.0.0.1:3132/__fixture/spend')
+})
+
+test('shared aggregate ceiling blocks Assist after a failed Compile without another model call', async ({ page, context, request }) => {
+  await request.post('http://127.0.0.1:3132/__fixture/quota?mode=provider-failure')
+  await request.post('http://127.0.0.1:3132/__fixture/spend?limit=1')
+  await signInFixture(context,request)
+  const before=(await(await request.get('http://127.0.0.1:3132/__fixture/stats')).json()).modelCalls
+  expect((await context.request.post('/api/generate',{data:input})).status()).toBe(502)
+  await page.goto('/workspace')
+  await page.getByRole('button',{name:'Lyrics',exact:true}).click()
+  await page.getByRole('button',{name:'+ Verse',exact:true}).click()
+  await page.getByLabel('Verse lyrics',{exact:true}).fill('Keep this line\nOld ending')
+  await page.getByLabel('What would you like to change in this section?').fill('Change the ending.')
+  const response=page.waitForResponse('**/api/workspace-assist')
+  await page.getByRole('button',{name:'Suggest a section revision',exact:true}).click()
+  expect((await response).status()).toBe(503)
+  await expect(page.getByText('Assistance is unavailable. Your song is unchanged.')).toBeVisible()
+  await expect(page.getByLabel('Verse lyrics',{exact:true})).toHaveValue('Keep this line\nOld ending')
+  expect(await(await request.get('http://127.0.0.1:3132/__fixture/stats')).json()).toMatchObject({modelCalls:before+1,spendUsed:1,quotaUsed:1})
 })
 
 test('quota and provider errors retain intent and show retry guidance in the real browser', async ({ page, context, request }, testInfo) => {

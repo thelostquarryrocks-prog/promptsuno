@@ -5,7 +5,7 @@ const { createCompletion, constructProvider, getUser, createClient, reserve } = 
   createCompletion: vi.fn(), constructProvider: vi.fn(), getUser: vi.fn(), createClient: vi.fn(), reserve: vi.fn(),
 }))
 vi.mock('../src/lib/supabase/server', () => ({ createClient }))
-vi.mock('../src/lib/compiler-quota', () => ({ reserveCompilerAttempt: reserve }))
+vi.mock('../src/lib/ai-spend', () => ({ reserveAIRequest: reserve, AI_MODEL: 'gpt-5.6-luna', AI_OUTPUT_TOKEN_CAP: 2048 }))
 vi.mock('openai', () => ({ default: class {
   constructor(options: unknown) { constructProvider(options) }
   chat = { completions: { create: createCompletion } }
@@ -108,7 +108,7 @@ describe('guarded workspace assistance', () => {
     expect((await POST(request({ ...input, nodes: [] }, { host: '127.0.0.1:3131', origin: 'http://127.0.0.1:3131' }))).status).toBe(200)
   })
   it('returns quota denial with retry metadata and no provider', async () => {
-    reserve.mockResolvedValue({ allowed: false, retryAfterSeconds: 60 })
+    reserve.mockResolvedValue({ allowed: false, reason: 'quota', retryAfterSeconds: 60 })
     const response = await POST(request())
     expect(response.status).toBe(429); expect(response.headers.get('retry-after')).toBe('60')
     expect(constructProvider).not.toHaveBeenCalled()

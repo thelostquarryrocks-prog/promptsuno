@@ -218,6 +218,7 @@ try {
     await assert.rejects(reserve(a), /foreign key constraint/)
     assert.equal(await sql('select user_id from compiler_quota_private.usage'), b)
   })
+  await (await import('./ai-spend.mjs')).runSpendChecks({ sql, check, session, a, b })
   console.log(`${passed} database checks passed; no remote host accepted. Disposable database retained for inspection.`)
 } catch (error) {
   console.error(`${passed} database checks completed. Verification failed/unavailable: ${error.message}`)

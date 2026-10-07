@@ -1,28 +1,30 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { createClient } from '../../../lib/supabase/server'
+import { authRequestOrigin, FLOW_ID, OAUTH_FLOW_COOKIE } from '../../../lib/social-auth'
 
 export async function GET(request: Request) {
-  // Extract the URL, the origin (your domain), and the search parameters
-  const { searchParams, origin } = new URL(request.url)
-  
-  // Get the security code Supabase attached to the email link
-  const code = searchParams.get('code')
-  
-  // Determine where to send them after logging in (defaults to /workspace)
-  const next = searchParams.get('next') ?? '/workspace'
-
-  if (code) {
-    const supabase = await createClient(request.url)
-    
-    // Securely exchange the code for an active user session
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    
-    if (!error) {
-      // If successful, send them to the workspace
-      return NextResponse.redirect(`${origin}${next}`)
-    }
+  const { searchParams } = new URL(request.url)
+  const origin = authRequestOrigin(request)
+  const store = await cookies()
+  const redirect = (path: string) => {
+    const response = NextResponse.redirect(new URL(path, origin))
+    response.headers.set('Cache-Control', 'private, no-store')
+    response.headers.set('Referrer-Policy', 'no-referrer')
+    // Use the same mutable cookie store as the SSR code exchange, so Next's
+    // final cookie merge cannot drop the handoff deletion during token writes.
+    store.set(OAUTH_FLOW_COOKIE, '', { httpOnly: true, sameSite: 'lax', secure: new URL(request.url).protocol === 'https:', path: '/auth', maxAge: 0 })
+    return response
   }
-
-  // If the code is invalid or expired, send them back to login with an error
-  return NextResponse.redirect(`${origin}/login?error=Could not verify email`)
+  if (searchParams.has('error')) return redirect(`/login?auth_error=${searchParams.get('error') === 'access_denied' ? 'cancelled' : 'failed'}`)
+  const code = searchParams.get('code')
+  if (!code || code.length > 4096) return redirect('/login?auth_error=expired')
+  try {
+    const client = await createClient(request.url)
+    const { error } = await client.auth.exchangeCodeForSession(code)
+    if (error) return redirect('/login?auth_error=expired')
+    const flow = store.get(OAUTH_FLOW_COOKIE)?.value
+    // Fixed local destinations only. Ignore next and forwarded-host parameters.
+    return redirect(flow && FLOW_ID.test(flow) ? `/auth/complete?flow=${flow}` : '/workspace')
+  } catch { return redirect('/login?auth_error=unavailable') }
 }
