@@ -49,7 +49,7 @@ it('ignores next and forwarded-host, clears flow cookie and sends private callba
   expect(exchange).toHaveBeenCalledExactlyOnceWith('once')
   expect(result.headers.get('location')).toBe(`https://app.invalid/auth/complete?flow=${flow}`)
   expect(result.headers.get('cache-control')).toBe('private, no-store');expect(result.headers.get('referrer-policy')).toBe('no-referrer')
-  expect(result.headers.get('set-cookie')).toContain('Max-Age=0')
+  expect(set).toHaveBeenCalledWith('promptsuno-oauth-flow','',expect.objectContaining({maxAge:0,path:'/auth',httpOnly:true}))
 })
 it.each(['access_denied','provider-secret'])('handles cancellation/error without exchanging a code or reflecting details',async error=>{
   const result=await GET(new Request(`https://app.invalid/auth/callback?error=${error}&error_description=private`))

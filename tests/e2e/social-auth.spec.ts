@@ -24,7 +24,7 @@ test('cancelled social login preserves the starter and unconfigured providers st
   await page.evaluate(key=>sessionStorage.setItem(key,JSON.stringify({version:1,text:'Still mine.',examples:[],createdAt:Date.now(),ownerId:null})),STARTER_INTENT_STORAGE_KEY)
   await expect(page.getByRole('button',{name:'Sign in with Google'})).toBeEnabled()
   await page.getByRole('button',{name:'Sign in with Google'}).click()
-  await expect(page.getByRole('alert')).toContainText('cancelled')
+  await expect(page.getByRole('alert').filter({hasText:'Social sign-in was cancelled.'})).toBeVisible()
   expect(await page.evaluate(key=>JSON.parse(sessionStorage.getItem(key)!).text,STARTER_INTENT_STORAGE_KEY)).toBe('Still mine.')
   for(const mode of ['disabled','signup-drift']){
     await request.post(`http://127.0.0.1:3132/__fixture/oauth?mode=${mode}`);await page.reload()
