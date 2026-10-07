@@ -54,8 +54,9 @@ flowchart LR
   B <--> L[Tab-local song storage]
   B <-->|session and sign-in| A[Supabase Auth]
   G[Google OAuth] <--> A
-  N -->|verified session / narrow RPC| A
-  A --> D[(Postgres private quota and spend policy)]
+  N -->|verify identity| A
+  N -->|session JWT and reservation RPC| Q[Supabase Data API]
+  Q --> D[(Postgres private quota and spend policy)]
   N -.->|only after all enablement and reservations| O[OpenAI text completion]
   U -->|manual copy and listening| S[Suno outside system boundary]
   R[Curated catalog and Learn records] --> N
