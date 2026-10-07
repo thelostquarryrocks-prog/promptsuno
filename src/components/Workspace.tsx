@@ -10,6 +10,8 @@ import { clearStarterIntent, consumeStarterIntent, hasStarterIntent } from '../l
 import { WorkspaceProvider, useWorkspace } from './WorkspaceProvider'
 import ProposalReview from './ProposalReview'
 import WorkspaceAssistance from './WorkspaceAssistance'
+import WorkspaceIcon from './WorkspaceIcon'
+import WorkspaceHint from './WorkspaceHint'
 import { createWorkspaceDraft } from '../lib/workspace-draft'
 import './creative-workbench.css'
 
@@ -49,6 +51,8 @@ function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { d
   const accountRevision = useRef(0)
   const requestInFlight = useRef(false)
   const generateButton = useRef<HTMLButtonElement>(null)
+  const songDrawer = useRef<HTMLDialogElement>(null)
+  const songTrigger = useRef<HTMLButtonElement>(null)
   const restoreGenerateFocus = useRef(false)
   const router = useRouter()
   const navigateToIntent = useCallback((mode: 'brain' | 'lyrics', id: string | null = null) => {
@@ -246,9 +250,13 @@ function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { d
           <p role="status" className="text-xs text-gray-400">{saveStatus}</p>
           {saveStatus.startsWith('Not saved') && <button onClick={retrySave} className={`text-sm text-amber-300 ${focusStyle}`}>Retry autosave</button>}
         </div>
-        <nav aria-label="Song tools" className="song-modes">
-          {(['brain', 'lyrics', 'doctor'] as const).map(mode => <button key={mode} aria-current={draft.mode === mode ? 'page' : undefined} onClick={() => update(current => ({ ...current, mode }))}>{mode === 'brain' ? 'Brain' : mode === 'lyrics' ? 'Lyrics' : 'Doctor'}</button>)}
-        </nav>
+        <div className="workspace-navigation">
+          <nav aria-label="Song tools" className="song-modes">
+            {(['brain', 'lyrics', 'doctor'] as const).map(mode => <button key={mode} aria-current={draft.mode === mode ? 'page' : undefined} onClick={() => update(current => ({ ...current, mode }))}><WorkspaceIcon name={mode} />{mode === 'brain' ? 'Brain' : mode === 'lyrics' ? 'Lyrics' : 'Doctor'}</button>)}
+          </nav>
+          <button ref={songTrigger} className="song-drawer-trigger" aria-haspopup="dialog" onClick={() => songDrawer.current?.showModal()}><WorkspaceIcon name="song" /><span>Song drawer<small>Context · saved material</small></span><span aria-hidden="true">↗</span></button>
+        </div>
+        <WorkspaceHint id="song">One song, three tools. Open <b>Song drawer</b> for your sound context, preserved material and backup.</WorkspaceHint>
         {starterStatus && <p role="status" className="text-sm text-gray-300">{starterStatus}</p>}
         <div hidden={draft.mode !== 'brain'} className="space-y-6">
         {intentFocus?.mode === 'brain' && <p className="intent-spotlight">Review {selectedNodes.find(node => node.node_id === intentFocus.id)?.label || 'your sound notes'} in the context of this song. No sound ideas were added or removed.</p>}
@@ -305,8 +313,10 @@ function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { d
           {draft.mode === 'doctor' && <PromptDoctor key={`doctor-${draft.project.id}`} onNavigate={navigateToIntent} assistanceAvailable={assistanceAvailable} />}
         </Suspense>
         {draft.mode === 'brain' && <ProposalReview onNavigate={navigateToIntent} />}
-        <details className="song-dock">
-          <summary>{draft.project.title || 'Untitled song'} · {selectedNodes.length} sound ideas · {draft.lyrics.text ? 'Lyrics draft' : 'No lyrics yet'}</summary>
+        <dialog ref={songDrawer} className="song-dock" aria-labelledby="song-drawer-heading" onClose={() => songTrigger.current?.focus()} onClick={event => { if (event.target === event.currentTarget) songDrawer.current?.close() }}>
+          <div className="song-drawer-header"><div><p className="drawer-kicker">YOUR SONG / SHARED CONTEXT</p><h2 id="song-drawer-heading">Song drawer</h2></div><button autoFocus aria-label="Close song drawer" onClick={() => songDrawer.current?.close()}><WorkspaceIcon name="reject" /></button></div>
+          <p className="song-drawer-title">{draft.project.title || 'Untitled song'}</p>
+          <p>{selectedNodes.length} sound ideas · {draft.lyrics.text ? 'Lyrics draft' : 'No lyrics yet'} · {draft.preservationGoals.length} preserved</p>
           <div className="space-y-3 pt-4 text-sm">
             <p><strong>Sound:</strong> {selectedNodes.map(node => node.label).join(' · ') || 'Collect your first idea in Brain.'}</p>
             <p className="whitespace-pre-wrap"><strong>Intent:</strong> {relationshipNotes || 'No relationship notes yet.'}</p>
@@ -338,7 +348,7 @@ function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { d
             </div>}
             {saveStatus.startsWith('Saved copy found') && <button onClick={recoverSave} className={`min-h-11 text-amber-300 ${focusStyle}`}>Replace saved copy with this song</button>}
           </div>
-        </details>
+        </dialog>
       </main>
     </div>
   )
