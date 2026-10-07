@@ -444,7 +444,7 @@ describe('shared song autosave and recovery', () => {
     fireEvent.change(screen.getByLabelText('Relationship notes'), { target: { value: 'Recovered current idea.' } })
     await collect(user, 'Piano')
     expect(sessionStorage.getItem(key)).toBe('{unreadable draft')
-    await user.click(screen.getByText(/Untitled song.*1 sound ideas/))
+    await user.click(screen.getByRole('button', { name: /Song drawer/ }))
     await user.click(screen.getByRole('button', { name: 'Replace unreadable copy with this song' }))
     await screen.findByText('Saved in this tab')
     expect(JSON.parse(sessionStorage.getItem(key)!).styleIntent).toMatchObject({ selectedNodes: [piano], relationshipNotes: 'Recovered current idea.' })

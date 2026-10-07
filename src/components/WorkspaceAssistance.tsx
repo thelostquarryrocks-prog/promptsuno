@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useWorkspace } from './WorkspaceProvider'
 import { buildAssistRequest, parseAssistResponse } from '../lib/workspace-assistance'
 import { makeProposal } from '../lib/workspace-revisions'
+import WorkspaceIcon from './WorkspaceIcon'
 
 export default function WorkspaceAssistance({ action, targetId = null, available = false }: { action: 'lyrics' | 'doctor'; targetId?: string | null; available?: boolean }) {
   const { draft, update } = useWorkspace()
@@ -61,6 +62,7 @@ export default function WorkspaceAssistance({ action, targetId = null, available
     <button onClick={request} disabled={pending || targetLocked || (action === 'lyrics' && !sectionTarget) || (action === 'doctor' && !draft.doctor.reportedProblem.trim())}>{pending ? 'Considering your song…' : action === 'doctor' ? 'Ask Doctor for a small experiment' : 'Suggest a section revision'}</button>
     {targetLocked && <p role="status">This section is preserved. Choose an unlocked section to revise. Preserved phrases in an unlocked section can stay while its other lines change.</p>}
     {status && <p role="status">{status}</p>}
+    {draft.doctor.proposedChanges.some(proposal => proposal.status === 'pending') && <button className="review-suggestions" onClick={() => { const review = document.getElementById('song-revisions'); review?.scrollIntoView({ block: 'start', behavior: 'instant' }); review?.focus() }}><WorkspaceIcon name="preview" />Review pending changes</button>}
     {observations.length > 0 && <div><h3>Observations from this request</h3><ul>{observations.map((observation, index) => <li key={index}>{observation}</li>)}</ul></div>}
   </div>
 }
