@@ -70,7 +70,7 @@ async function mount() {
   return { user, view }
 }
 async function preview(user: ReturnType<typeof userEvent.setup>, after: string) {
-  await user.click(screen.getByRole('button', { name: 'Doctor' }))
+  await user.click(screen.getByRole('button', { name: 'Fix' }))
   await user.click(await screen.findByText('Plan your own small experiment'))
   fireEvent.change(screen.getByLabelText('Your proposed revision'), { target: { value: after } })
   await user.click(screen.getByRole('button', { name: 'Preview my experiment' }))
@@ -90,7 +90,7 @@ describe('manual creative loop', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('removes a preserved phrase')
     expect(screen.getByLabelText('Verse lyrics')).toHaveValue('Keep my phrase\nOld ending')
     expect(screen.getByLabelText('Chorus lyrics')).toBeDisabled()
-    await user.click(screen.getByRole('button', { name: 'Doctor' }))
+    await user.click(screen.getByRole('button', { name: 'Fix' }))
     await user.click(await screen.findByText('Plan your own small experiment'))
     await user.selectOptions(screen.getByLabelText('Where would you like to try a change?'), 'section:chorus-one')
     fireEvent.change(screen.getByLabelText('Your proposed revision'), { target: { value: 'Replace chorus' } })
@@ -129,8 +129,8 @@ describe('manual creative loop', () => {
     seedSong()
     const { user } = await mount()
     await preview(user, 'Proposed older direction.')
-    await user.click(screen.getByRole('button', { name: 'Brain' }))
-    fireEvent.change(screen.getByLabelText('Relationship notes'), { target: { value: 'Newer authored direction.' } })
+    await user.click(screen.getByRole('button', { name: 'Sound' }))
+    fireEvent.change(screen.getByLabelText('Describe your song'), { target: { value: 'Newer authored direction.' } })
     await user.click(screen.getByRole('button', { name: 'Try this change' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('changed since the proposal')
     expect(stored().styleIntent.relationshipNotes).toBe('Newer authored direction.')
@@ -179,7 +179,7 @@ describe('pending creative response boundaries', () => {
     act(() => { for (const listener of auth.listeners) listener('SIGNED_IN', { user: { id: 'creative-test-other-owner' } }) })
     await act(async () => finish(Response.json(response)))
     expect(screen.getByLabelText('Song title')).toHaveValue('Other account song')
-    expect(screen.getByLabelText('Relationship notes')).toHaveValue('Other private direction.')
+    expect(screen.getByLabelText('Describe your song')).toHaveValue('Other private direction.')
     const current = JSON.parse(sessionStorage.getItem(otherKey)!)
     expect(current.doctor.proposedChanges).toHaveLength(0)
     expect(current.doctor.hypotheses).toHaveLength(0)
@@ -206,7 +206,7 @@ describe('pending creative response boundaries', () => {
     let finish!: (response: Response) => void
     fetchMock.mockImplementationOnce(() => new Promise<Response>(resolve => { finish = resolve }))
     await user.click(screen.getByRole('button', { name: 'Generate Prompt' }))
-    await user.click(screen.getByRole('button', { name: 'Doctor' }))
+    await user.click(screen.getByRole('button', { name: 'Fix' }))
     await user.click(await screen.findByRole('button', { name: 'Try this change' }))
     await act(async () => finish(Response.json({ version: '1.0.0', status: 'ready', styles: 'Older compiler output.', coverage: [{ node_id: 'piano', status: 'preserved' }], interpretations: [], questions: [] })))
     expect(stored().styleIntent[target]).toBe('Newer explicitly applied direction.')

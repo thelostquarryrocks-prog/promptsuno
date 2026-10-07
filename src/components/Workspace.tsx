@@ -1,6 +1,6 @@
 'use client'
 
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -13,7 +13,11 @@ import WorkspaceAssistance from './WorkspaceAssistance'
 import WorkspaceIcon from './WorkspaceIcon'
 import WorkspaceHint from './WorkspaceHint'
 import { createWorkspaceDraft } from '../lib/workspace-draft'
+import { buildMentionIndex, type MentionAliases } from '../lib/catalog-mentions'
+import MentionSuggestions from './MentionSuggestions'
+import SunoCard from './SunoCard'
 import './creative-workbench.css'
+import './song-flow.css'
 
 const LyricsStudio = lazy(() => import('./LyricsStudio'))
 const PromptDoctor = lazy(() => import('./PromptDoctor'))
@@ -25,15 +29,26 @@ const SoundBrainCanvas = dynamic(() => import('./SoundBrainCanvas'), {
 
 const focusStyle = 'focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-yellow-300'
 
-export default function Workspace({ discoveryNodes, affinities, assistanceAvailable = false }: {
+// One song, four steps in the order people actually work. Sound, Lyrics and Fix
+// are the persisted modes; Send to Suno is a read-only view over the same song.
+type Step = 'brain' | 'lyrics' | 'suno' | 'doctor'
+const steps: { id: Step; label: string; icon: 'brain' | 'lyrics' | 'send' | 'doctor' }[] = [
+  { id: 'brain', label: 'Sound', icon: 'brain' },
+  { id: 'lyrics', label: 'Lyrics', icon: 'lyrics' },
+  { id: 'suno', label: 'Send to Suno', icon: 'send' },
+  { id: 'doctor', label: 'Fix', icon: 'doctor' },
+]
+
+export default function Workspace({ discoveryNodes, affinities, mentionAliases, assistanceAvailable = false }: {
   discoveryNodes: SelectedNode[]
   affinities: DiscoveryAffinities
+  mentionAliases?: MentionAliases
   assistanceAvailable?: boolean
 }) {
-  return <WorkspaceProvider catalog={discoveryNodes}><WorkspaceTools discoveryNodes={discoveryNodes} affinities={affinities} assistanceAvailable={assistanceAvailable} /></WorkspaceProvider>
+  return <WorkspaceProvider catalog={discoveryNodes}><WorkspaceTools discoveryNodes={discoveryNodes} affinities={affinities} mentionAliases={mentionAliases} assistanceAvailable={assistanceAvailable} /></WorkspaceProvider>
 }
 
-function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { discoveryNodes: SelectedNode[]; affinities: DiscoveryAffinities; assistanceAvailable: boolean }) {
+function WorkspaceTools({ discoveryNodes, affinities, mentionAliases, assistanceAvailable }: { discoveryNodes: SelectedNode[]; affinities: DiscoveryAffinities; mentionAliases?: MentionAliases; assistanceAvailable: boolean }) {
   const { draft, update, openAccount, closeAccount, saveStatus, retrySave, recoverSave } = useWorkspace()
   const { selectedNodes, relationshipNotes, compilerResult: result, compiledStyles: output } = draft.styleIntent
   const setSelectedNodes = useCallback((change: (nodes: SelectedNode[]) => SelectedNode[]) => update(current => ({ ...current, styleIntent: { ...current.styleIntent, selectedNodes: change(current.styleIntent.selectedNodes), compilerResult: null, compiledStyles: '' } })), [update])
@@ -46,6 +61,11 @@ function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { d
   const [starterStatus, setStarterStatus] = useState('')
   const [discoverySession, setDiscoverySession] = useState(0)
   const [intentFocus, setIntentFocus] = useState<{ mode: 'brain' | 'lyrics'; id: string | null } | null>(null)
+  const [sunoOpen, setSunoOpen] = useState(false)
+  const [compileUnavailable, setCompileUnavailable] = useState(false)
+  const pendingFocus = useRef<'generate' | 'title' | 'top' | null>(null)
+  const mentionIndex = useMemo(() => buildMentionIndex(discoveryNodes, mentionAliases), [discoveryNodes, mentionAliases])
+  const activeStep: Step = sunoOpen ? 'suno' : draft.mode
   const intentWasEdited = useRef(false)
   const workspaceOwner = useRef<string | null | undefined>(undefined)
   const accountRevision = useRef(0)
@@ -74,8 +94,30 @@ function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { d
   const router = useRouter()
   const navigateToIntent = useCallback((mode: 'brain' | 'lyrics', id: string | null = null) => {
     setIntentFocus({ mode, id })
+    setSunoOpen(false)
     update(current => ({ ...current, mode }))
   }, [update])
+  const goToStep = useCallback((step: Step, focus: 'generate' | 'title' | null = null) => {
+    pendingFocus.current = focus ?? 'top'
+    setIntentFocus(null)
+    if (step === 'suno') { setSunoOpen(true); return }
+    setSunoOpen(false)
+    update(current => current.mode === step ? current : { ...current, mode: step })
+  }, [update])
+  useEffect(() => {
+    const target = pendingFocus.current
+    if (!target) return
+    pendingFocus.current = null
+    if (target === 'generate') { generateButton.current?.scrollIntoView?.({ block: 'center' }); generateButton.current?.focus() }
+    else if (target === 'title') document.getElementById('song-title')?.focus()
+    else {
+      // Start each step at its top. Mobile scrolls inside <main>; desktop scrolls the window.
+      const main = navigation.current?.closest('main')
+      if (main && main.scrollTop > 0) main.scrollTop = 0
+      else if (window.scrollY > 0) window.scrollTo({ top: 0 })
+      document.getElementById('workspace-step-heading')?.focus({ preventScroll: true })
+    }
+  }, [draft.mode, sunoOpen])
   useEffect(() => {
     if (draft.mode !== 'brain' || intentFocus?.mode !== 'brain') return
     const element = intentFocus.id ? document.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(intentFocus.id)}"]`) : document.getElementById('relationship-notes')
@@ -105,6 +147,7 @@ function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { d
       accountRevision.current += 1
       setDiscoverySession(value => value + 1)
       setIntentFocus(null)
+      setSunoOpen(false)
       intentWasEdited.current = true
       clearStarterIntent()
       closeAccount()
@@ -142,7 +185,7 @@ function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { d
       if (starter.status === 'ready') {
         intentWasEdited.current = true
         setRelationshipNotes(starter.notes)
-        setStarterStatus('Your starter is in Relationship notes. Collect Sound Brain nodes when you’re ready.')
+        setStarterStatus('Your idea is in the description below. Add any sounds we found in it, then explore for more.')
       } else if (starter.status === 'discarded') {
         setStarterStatus('Your current workspace was kept. The pending starter was not applied.')
       } else if (starter.status === 'unavailable') {
@@ -204,7 +247,8 @@ function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { d
         return
       }
       if (response.status === 503) {
-        setError('Prompt compilation is currently unavailable. Your nodes and notes are still here.')
+        setCompileUnavailable(true)
+        setError('Prompt compilation is currently unavailable. Your nodes and notes are still here. You can still use a quick draft in Send to Suno.')
         return
       }
       if (!response.ok) throw new Error('Could not compile your prompt. Your nodes and notes are still here. Please try again.')
@@ -271,23 +315,29 @@ function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { d
         </div>
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-4 pt-7 sm:p-6">
         <div ref={navigation} className="workspace-navigation">
-          <nav aria-label="Song tools" className="song-modes">
-            {(['brain', 'lyrics', 'doctor'] as const).map(mode => <button key={mode} aria-current={draft.mode === mode ? 'page' : undefined} onClick={() => update(current => ({ ...current, mode }))}><WorkspaceIcon name={mode} />{mode === 'brain' ? 'Brain' : mode === 'lyrics' ? 'Lyrics' : 'Doctor'}</button>)}
+          <nav aria-label="Song tools" className="song-modes song-steps">
+            {steps.map((step, index) => {
+              const done = step.id === 'brain' ? selectedNodes.length > 0
+                : step.id === 'lyrics' ? draft.lyrics.text.trim().length > 0
+                  : step.id === 'suno' ? output.trim().length > 0 : false
+              return <button key={step.id} type="button" aria-current={activeStep === step.id ? 'page' : undefined} data-done={done || undefined} onClick={() => goToStep(step.id)}>
+                <span className="step-number" aria-hidden="true">{index + 1}</span><WorkspaceIcon name={step.icon} />{step.label}
+              </button>
+            })}
           </nav>
         </div>
-        <WorkspaceHint id="song">One song, three tools. Open <b>Song drawer</b> for your sound context, preserved material and backup.</WorkspaceHint>
+        <WorkspaceHint id="song">Four steps, one song. Go in order or jump around. Everything stays in sync, and <b>Song drawer</b> holds your backup.</WorkspaceHint>
         {starterStatus && <p role="status" className="text-sm text-gray-300">{starterStatus}</p>}
-        <div hidden={draft.mode !== 'brain'} className="space-y-6">
+        <div hidden={draft.mode !== 'brain' || sunoOpen} className="space-y-6">
         {intentFocus?.mode === 'brain' && <p className="intent-spotlight">Review {selectedNodes.find(node => node.node_id === intentFocus.id)?.label || 'your sound notes'} in the context of this song. No sound ideas were added or removed.</p>}
-        <section aria-labelledby="sound-brain-heading" className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="sound-brain-heading" className="text-xl font-bold tracking-tight">Sound Brain Collector</h2><Link href="/learn/style-prompts" className={`text-sm text-amber-300 ${focusStyle}`}>Prompting guide →</Link></div>
-          <SoundBrainCanvas key={discoverySession} discoveryNodes={discoveryNodes} affinities={affinities} selectedNodes={selectedNodes} onCollect={collectNode} onRemove={removeNode} disabled={isGenerating} highlightedNodeId={intentFocus?.mode === 'brain' ? intentFocus.id : null} />
-          <p role="status" className="text-sm text-gray-300">{selectedNodes.length === 0 ? 'Collect nodes to begin.' : `${selectedNodes.length} ${selectedNodes.length === 1 ? 'node' : 'nodes'} selected.`}</p>
-        </section>
+        <div className="step-intro">
+          <h2 id={activeStep === 'brain' ? 'workspace-step-heading' : undefined} tabIndex={-1}>What should it sound like?</h2>
+          <p>Describe it in your own words, then pick sounds to make it specific.</p>
+        </div>
 
         <div className="brain-notes space-y-2">
-          <label htmlFor="relationship-notes" className="text-sm font-medium text-gray-300">Relationship notes</label>
-          <p id="notes-help" className="text-sm text-gray-400">Describe roles, contrasts, or sections. For example: Piano leads while cello stays in the background.</p>
+          <label htmlFor="relationship-notes" className="text-sm font-medium text-gray-200">Describe your song</label>
+          <p id="notes-help" className="text-sm text-gray-400">Say what leads and what sits back. For example: piano leads while the cello stays in the background.</p>
           <textarea id="relationship-notes" aria-describedby="notes-help" value={relationshipNotes} disabled={isGenerating} onChange={event => {
             intentWasEdited.current = true
             setRelationshipNotes(event.target.value)
@@ -297,24 +347,31 @@ function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { d
             setError('')
             if (result?.status === 'ready') setResult(null)
           }} rows={3} className={`w-full rounded-xl border border-[#38444d] bg-[#0f171c] p-3 text-sm ${focusStyle}`} />
+          <MentionSuggestions text={relationshipNotes} index={mentionIndex} selectedNodes={selectedNodes} onAdd={collectNode} disabled={isGenerating} />
         </div>
+
+        <section aria-labelledby="sound-brain-heading" className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="sound-brain-heading" className="text-xl font-bold tracking-tight">Explore sounds</h2><Link href="/learn/style-prompts" className={`text-sm text-amber-300 ${focusStyle}`}>How to describe a sound</Link></div>
+          <SoundBrainCanvas key={discoverySession} discoveryNodes={discoveryNodes} affinities={affinities} selectedNodes={selectedNodes} onCollect={collectNode} onRemove={removeNode} disabled={isGenerating} highlightedNodeId={intentFocus?.mode === 'brain' ? intentFocus.id : null} />
+          <p role="status" className="text-sm text-gray-300">{selectedNodes.length === 0 ? 'Collect nodes to begin.' : `${selectedNodes.length} ${selectedNodes.length === 1 ? 'node' : 'nodes'} selected.`}</p>
+        </section>
 
         {result?.status === 'needs_clarification' && (
           <section aria-labelledby="clarification-heading" role="status" className="space-y-2 rounded-md border border-yellow-400/40 p-4">
             <h2 id="clarification-heading" className="font-semibold text-yellow-300">A little more direction</h2>
             <ul className="list-disc space-y-1 pl-5 text-sm">{result.questions.map((question, index) => <li key={index}>{question}</li>)}</ul>
-            <p className="text-sm text-gray-300">Answer in Relationship notes, then compile again.</p>
+            <p className="text-sm text-gray-300">Answer in your song description, then compile again.</p>
           </section>
         )}
 
-        <button ref={generateButton} onClick={handleGenerate} disabled={isGenerating || selectedNodes.length === 0} className={`min-h-12 rounded-full bg-linear-to-r from-[#ff6734] to-[#ffe043] px-4 py-3 text-sm font-bold text-black hover:brightness-110 disabled:opacity-50 ${focusStyle}`}>
+        <button ref={generateButton} onClick={handleGenerate} disabled={isGenerating || selectedNodes.length === 0} className={`min-h-12 w-full rounded-full bg-linear-to-r from-[#ff6734] to-[#ffe043] px-4 py-3 text-sm font-bold text-black hover:brightness-110 disabled:opacity-50 ${focusStyle}`}>
           {isGenerating ? 'Crafting Prompt…' : result?.status === 'needs_clarification' ? 'Compile with clarification' : 'Generate Prompt'}
         </button>
         {isGenerating && <p role="status" className="text-sm text-gray-300">Compiling your selected nodes and notes…</p>}
         {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
 
         {(result?.status === 'ready' || output) && (
-          <section aria-labelledby="output-heading" className="space-y-3 pb-6">
+          <section aria-labelledby="output-heading" className="space-y-3">
             <h2 id="output-heading" className="text-sm font-medium text-gray-300">Suno Styles candidate</h2>
             <label htmlFor="styles-output" className="sr-only">Editable Styles prompt</label>
             <textarea id="styles-output" value={output} onChange={event => { setOutput(event.target.value); setCopyStatus('') }} rows={5} className={`w-full rounded-xl border border-[#38444d] bg-[#0f171c] p-4 text-sm leading-relaxed ${focusStyle}`} />
@@ -326,12 +383,25 @@ function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { d
             {!!result?.interpretations.length && <ul className="list-disc space-y-1 pl-5 text-sm text-gray-300">{result.interpretations.map((item, index) => <li key={index}>{item}</li>)}</ul>}
           </section>
         )}
+        <div className="step-footer">
+          <button type="button" className="step-next" onClick={() => goToStep('lyrics')}>Continue to lyrics</button>
+          <button type="button" className="step-skip" onClick={() => goToStep('suno')}>Skip, it’s an instrumental</button>
+        </div>
         </div>
         <Suspense fallback={<p role="status">Opening your workbench…</p>}>
-          {draft.mode === 'lyrics' && <div key={`lyrics-${draft.project.id}`} className="space-y-6"><LyricsStudio focusSectionId={intentFocus?.mode === 'lyrics' ? intentFocus.id : null} /><WorkspaceAssistance action="lyrics" available={assistanceAvailable} targetId={intentFocus?.mode === 'lyrics' ? intentFocus.id : draft.lyrics.sections[0]?.id || null} /><ProposalReview onNavigate={navigateToIntent} /></div>}
-          {draft.mode === 'doctor' && <PromptDoctor key={`doctor-${draft.project.id}`} onNavigate={navigateToIntent} assistanceAvailable={assistanceAvailable} />}
+          {draft.mode === 'lyrics' && !sunoOpen && <div key={`lyrics-${draft.project.id}`} className="space-y-6"><span id="workspace-step-heading" tabIndex={-1} className="sr-only">Lyrics step</span><LyricsStudio focusSectionId={intentFocus?.mode === 'lyrics' ? intentFocus.id : null} /><WorkspaceAssistance action="lyrics" available={assistanceAvailable} targetId={intentFocus?.mode === 'lyrics' ? intentFocus.id : draft.lyrics.sections[0]?.id || null} /><ProposalReview onNavigate={navigateToIntent} />
+            <div className="step-footer"><button type="button" className="step-next" onClick={() => goToStep('suno')}>Continue to Send to Suno</button></div></div>}
+          {draft.mode === 'doctor' && !sunoOpen && <div className="space-y-6"><span id="workspace-step-heading" tabIndex={-1} className="sr-only">Fix step</span><PromptDoctor key={`doctor-${draft.project.id}`} onNavigate={navigateToIntent} assistanceAvailable={assistanceAvailable} /></div>}
         </Suspense>
-        {draft.mode === 'brain' && <ProposalReview onNavigate={navigateToIntent} />}
+        {sunoOpen && <div className="space-y-6">
+          <span id="workspace-step-heading" tabIndex={-1} className="sr-only">Send to Suno step</span>
+          <SunoCard title={draft.project.title} styles={output} lyrics={draft.lyrics.text} sectionCount={draft.lyrics.sections.length || (draft.lyrics.text.trim() ? 1 : 0)}
+            selectedNodes={selectedNodes} compileUnavailable={compileUnavailable}
+            onUseQuickDraft={styles => { setResult(null); setOutput(styles) }}
+            onGoTo={(step, focus) => goToStep(step, focus ?? null)} />
+          <div className="step-footer"><button type="button" className="step-next" onClick={() => goToStep('doctor')}>Listened? Fix what missed</button></div>
+        </div>}
+        {draft.mode === 'brain' && !sunoOpen && <ProposalReview onNavigate={navigateToIntent} />}
         <dialog ref={songDrawer} className="song-dock" aria-labelledby="song-drawer-heading" onClose={() => songTrigger.current?.focus()} onClick={event => { if (event.target === event.currentTarget) songDrawer.current?.close() }}>
           <div className="song-drawer-header"><div><p className="drawer-kicker">YOUR SONG / SHARED CONTEXT</p><h2 id="song-drawer-heading">Song drawer</h2></div><button autoFocus aria-label="Close song drawer" onClick={() => songDrawer.current?.close()}><WorkspaceIcon name="reject" /></button></div>
           <p className="song-drawer-title">{draft.project.title || 'Untitled song'}</p>

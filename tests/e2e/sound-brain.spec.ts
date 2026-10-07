@@ -1,5 +1,5 @@
 import { expect, test } from './test'
-import { login } from './login'
+import { login, revealSoundScene } from './login'
 
 test('category changes preserve selected records, exact notes and the compiler payload', async ({ page }) => {
   await login(page)
@@ -7,14 +7,14 @@ test('category changes preserve selected records, exact notes and the compiler p
   await page.getByText('Choose nodes without dragging').click()
   await page.getByRole('button', { name: 'Collect Piano', exact: true }).click()
   const notes = '  Piano leads.\nKeep the contrast exactly.  '
-  await page.getByLabel('Relationship notes').fill(notes)
+  await page.getByLabel('Describe your song').fill(notes)
   await page.getByRole('button', { name: 'Genre', exact: true }).click()
   await expect(page.locator('[data-stream-node]:not([data-category="Genre"])')).toHaveCount(0)
   await page.getByRole('button', { name: 'Collect Synthwave', exact: true }).click()
   await page.getByRole('button', { name: 'Collect Dreamy Ambient', exact: true }).click()
   await page.getByRole('button', { name: 'Instrument', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Collect Piano', exact: true })).toBeDisabled()
-  await expect(page.getByLabel('Relationship notes')).toHaveValue(notes)
+  await expect(page.getByLabel('Describe your song')).toHaveValue(notes)
   await page.route('**/api/generate', async route => {
     expect(route.request().postDataJSON()).toEqual({ nodes: [
       { node_id: 'piano', label: 'Piano', category: 'Instrument' },
@@ -25,13 +25,15 @@ test('category changes preserve selected records, exact notes and the compiler p
   })
   await page.getByRole('button', { name: 'Generate Prompt' }).click()
   await expect(page.getByRole('main').getByRole('alert')).toBeVisible()
-  await expect(page.getByLabel('Relationship notes')).toHaveValue(notes)
+  await expect(page.getByLabel('Describe your song')).toHaveValue(notes)
   await expect(page.locator('[data-node-id]')).toHaveCount(3)
 })
 
 test('queued category changes and lost capture never collect a cancelled drag', async ({ page }) => {
   await login(page)
+  await revealSoundScene(page)
   const node = page.locator('[data-stream-node]').first()
+  await node.scrollIntoViewIfNeeded()
   const box = (await node.boundingBox())!
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
   await page.mouse.down()
@@ -72,6 +74,7 @@ test('reduced motion preserves keyboard collection and responsive layout', async
 test('native touch drags, cancellation and category scrolling are independent', async ({ page, context }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile-chromium', 'CDP trusted touch dispatch is Chromium-only; WebKit keyboard and pointer coverage runs separately.')
   await login(page)
+  await revealSoundScene(page)
   const session = await context.newCDPSession(page)
   const node = page.locator('[data-stream-node]').first()
   await node.scrollIntoViewIfNeeded()

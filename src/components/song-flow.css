@@ -1,0 +1,109 @@
+/* Song flow: step rail, step footers, description suggestions, Send to Suno.
+   Tokens are scoped to the workspace so they can grow into a shared system
+   without changing the homepage or Learn styles. */
+.brain-workspace {
+  --ps-ink: #f3efe8;
+  --ps-muted: #a9b2b8;
+  --ps-surface: #0f171c;
+  --ps-raised: #141f25;
+  --ps-line: #33414a;
+  --ps-amber: #ffb13c;
+  --ps-gold: #ffe043;
+  --ps-ember: #ff6734;
+  --ps-ready: #b7d36b;
+}
+
+/* Step rail */
+.song-steps { gap: .25rem; }
+.song-steps button { position: relative; gap: .5rem; font-size: .9rem; }
+.song-steps .step-number { display: inline-grid; place-items: center; width: 1.45rem; height: 1.45rem; border-radius: 50%; border: 1.5px solid currentColor; font-size: .72rem; font-weight: 800; line-height: 1; flex: none; }
+.song-steps .workspace-icon { display: none; }
+.song-steps button[data-done] .step-number { background: var(--ps-ready); border-color: var(--ps-ready); color: #10170c; }
+.song-steps button[aria-current] .step-number { background: #11191e; border-color: #11191e; color: var(--ps-amber); }
+
+/* Step intro and footer */
+.step-intro h2 { font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 760; letter-spacing: -.03em; line-height: 1.15; color: var(--ps-ink); }
+.step-intro h2:focus { outline: none; }
+.step-intro p { margin-top: .35rem; color: var(--ps-muted); }
+.step-footer { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--ps-line); }
+.step-footer .step-next { min-height: 48px; padding: .7rem 1.4rem; border-radius: 999px; background: var(--ps-ink); color: #12181c; font-weight: 750; font-size: .95rem; }
+.step-footer .step-next:hover { background: #fff; }
+.step-footer .step-skip { min-height: 44px; color: var(--ps-muted); font-size: .88rem; text-decoration: underline; text-underline-offset: 3px; }
+.step-footer .step-skip:hover { color: var(--ps-ink); }
+.step-footer button:focus-visible { outline: 3px solid var(--ps-gold); outline-offset: 3px; }
+
+/* Suggestions found in the description */
+.mention-suggestions { display: grid; gap: .55rem; padding: .85rem; border: 1px dashed #6a5530; border-radius: 14px; background: #19150f; animation: mention-in .25s ease-out; }
+.mention-suggestions > p { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .25rem 1rem; font-size: .85rem; font-weight: 650; color: #ffe2a6; }
+.mention-suggestions > p span { font-weight: 400; color: var(--ps-muted); }
+.mention-chips { display: flex; flex-wrap: wrap; gap: .45rem; }
+.mention-chips button { display: inline-flex; align-items: baseline; gap: .4rem; min-height: 40px; padding: .45rem .8rem; border: 1px solid #8a6a3a; border-radius: 999px; background: #241b11; color: #fff1dc; font-size: .88rem; }
+.mention-chips button span { color: var(--ps-amber); font-weight: 800; }
+.mention-chips button small { color: #b99d77; font-size: .7rem; }
+.mention-chips button:hover:not(:disabled) { border-color: var(--ps-amber); background: #33230f; }
+.mention-chips .mention-all { border-style: dashed; color: var(--ps-amber); background: transparent; }
+.mention-chips button:focus-visible { outline: 3px solid var(--ps-gold); outline-offset: 2px; }
+.mention-chips button:disabled { opacity: .5; }
+@keyframes mention-in { from { opacity: 0; transform: translateY(-4px); } }
+
+/* Send to Suno */
+.suno-card { display: grid; gap: 1.25rem; color: var(--ps-ink); }
+.suno-card-header { display: grid; gap: 1rem; }
+.suno-card-header h2 { font-size: clamp(1.6rem, 4.5vw, 2.25rem); font-weight: 780; letter-spacing: -.035em; line-height: 1.1; }
+.suno-card-header p { margin-top: .4rem; max-width: 52ch; color: var(--ps-muted); line-height: 1.55; }
+.suno-card-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+.suno-open, .suno-download { display: inline-flex; align-items: center; gap: .5rem; min-height: 46px; padding: .6rem 1.1rem; border-radius: 999px; font-size: .9rem; font-weight: 700; }
+.suno-open { background: linear-gradient(100deg, var(--ps-ember), var(--ps-gold)); color: #15110b; }
+.suno-download { border: 1px solid var(--ps-line); color: var(--ps-ink); background: var(--ps-raised); }
+.suno-open:focus-visible, .suno-download:focus-visible { outline: 3px solid var(--ps-gold); outline-offset: 3px; }
+
+.suno-slots { display: grid; gap: .9rem; counter-reset: slot; list-style: none; padding: 0; margin: 0; }
+.suno-slot { counter-increment: slot; position: relative; display: grid; gap: .7rem; padding: 1rem 1rem 1rem 3.4rem; border: 1px solid var(--ps-line); border-radius: 16px; background: var(--ps-surface); }
+.suno-slot::before { content: counter(slot); position: absolute; left: 1rem; top: 1rem; display: grid; place-items: center; width: 1.7rem; height: 1.7rem; border-radius: 50%; border: 1.5px solid #59656d; color: var(--ps-muted); font-size: .8rem; font-weight: 800; }
+.suno-slot[data-ready] { border-color: #4f5f37; }
+.suno-slot[data-ready]::before { content: '✓'; background: var(--ps-ready); border-color: var(--ps-ready); color: #10170c; }
+.slot-head { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .8rem; min-height: 1.7rem; }
+.slot-head h3 { font-size: 1rem; font-weight: 720; }
+.slot-head > span { font-size: .78rem; color: var(--ps-muted); }
+.slot-copy { display: inline-flex; align-items: center; gap: .4rem; margin-left: auto; min-height: 40px; padding: .4rem .9rem; border: 1px solid #6f5a33; border-radius: 999px; color: #ffd98c; background: #211a10; font-size: .82rem; font-weight: 650; transition: background-color .2s, color .2s, border-color .2s; }
+.slot-copy[data-copied] { background: var(--ps-ready); border-color: var(--ps-ready); color: #10170c; }
+.slot-copy:disabled { opacity: .4; cursor: not-allowed; }
+.slot-copy:focus-visible { outline: 3px solid var(--ps-gold); outline-offset: 2px; }
+.slot-value { margin: 0; max-height: 15rem; overflow: auto; padding: .8rem .9rem; border-radius: 10px; background: #0a1014; border: 1px solid #263137; color: #e9e6df; font: inherit; font-size: .9rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.slot-value:focus-visible { outline: 2px solid var(--ps-gold); outline-offset: 2px; }
+.slot-title { font-weight: 700; font-size: 1.05rem; }
+.slot-empty { display: grid; gap: .6rem; justify-items: start; color: var(--ps-muted); font-size: .9rem; line-height: 1.55; }
+.slot-empty-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.slot-empty button { min-height: 44px; padding: .5rem 1rem; border: 1px solid #6f5a33; border-radius: 999px; color: #ffd98c; background: #211a10; font-weight: 650; font-size: .85rem; }
+.slot-empty button.is-primary { background: var(--ps-amber); border-color: var(--ps-amber); color: #15110b; }
+.slot-empty button:focus-visible { outline: 3px solid var(--ps-gold); outline-offset: 2px; }
+.slot-preview { width: 100%; padding: .6rem .75rem; border-left: 2px solid #6f5a33; color: #d8d2c7; font-size: .85rem; overflow-wrap: anywhere; }
+.slot-preview span { display: block; margin-bottom: .15rem; color: #b99d77; font-size: .72rem; font-weight: 650; }
+.suno-status:empty { display: none; }
+.suno-status { font-size: .85rem; color: #d6e4b4; }
+
+.suno-tips { padding: 1rem 1.1rem; border-radius: 14px; background: #19150f; border: 1px solid #3c3221; }
+.suno-tips h3 { font-size: .95rem; font-weight: 720; color: #ffe2a6; margin-bottom: .5rem; }
+.suno-tips ul { display: grid; gap: .45rem; padding-left: 1.1rem; list-style: disc; color: #d8d2c7; font-size: .88rem; line-height: 1.55; }
+.suno-tips b { color: var(--ps-ink); }
+
+@media (min-width: 720px) {
+  .suno-card-header { grid-template-columns: 1fr auto; align-items: end; }
+}
+
+@media (max-width: 600px) {
+  .song-steps .step-number { display: none; }
+  .song-steps .workspace-icon { display: inline-block; }
+  .workspace-navigation .song-steps button { font-size: .7rem; line-height: 1.15; text-align: center; padding-inline: 2px; }
+  .song-steps button[data-done]::after { content: ''; position: absolute; top: 7px; right: calc(50% - 16px); width: 7px; height: 7px; border-radius: 50%; background: var(--ps-ready); }
+  .suno-slot { padding-left: 1rem; padding-top: 3.1rem; }
+  .suno-slot::before { top: .9rem; }
+  .slot-head { position: absolute; top: .85rem; left: 3.2rem; right: 1rem; }
+  .slot-head > span { display: none; }
+  .step-footer .step-next { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mention-suggestions { animation: none; }
+  .slot-copy { transition: none; }
+}

@@ -72,7 +72,8 @@ No PASS/FAIL banners, no "SAFE TO..." lines, no restating of the fixed facts.
 - Stack: Next.js 16 App Router, Supabase Auth and Postgres, Vercel, PWA with a
   service worker. Build with `next build --webpack`.
 - Staging: Vercel project `promptsuno-signin-staging`
-  (`prj_3MzWlBvUpiOPkBtBMbkL2rKh6ZcU`), Vercel Authentication on, stable alias
+  (`prj_3MzWlBvUpiOPkBtBMbkL2rKh6ZcU`), Vercel Authentication off for staging
+  previews (owner-confirmed 2026-10-07), stable alias
   `https://promptsuno-signin-staging.vercel.app`. Staging deploys come from a
   clean detached worktree at an exact SHA, not the working checkout. Staging is
   keyless by default.
