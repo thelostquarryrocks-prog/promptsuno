@@ -54,6 +54,13 @@ test('first-use controls lead through song context preservation and a reversible
   await expect(page.getByText('Preview · not applied', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Review pending changes', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Song experiments' })).toBeFocused()
+  if (isMobile) {
+    await expect(page.locator('.brain-workspace')).toHaveCSS('--keyboard-inset', '0px')
+    const content = await page.getByRole('main').boundingBox()
+    const bar = await page.locator('.workspace-navigation').boundingBox()
+    expect(content!.y + content!.height).toBeLessThanOrEqual(bar!.y)
+    expect(bar!.y + bar!.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1)
+  }
   await expect(page.getByLabel('Verse lyrics', { exact: true })).toHaveValue('Keep this line\nOld ending')
   await page.getByRole('button', { name: 'Try this change', exact: true }).scrollIntoViewIfNeeded()
   await page.screenshot({ path: info.outputPath('workspace-discovery-revision.png'), fullPage: true })

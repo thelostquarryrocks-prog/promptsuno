@@ -57,11 +57,18 @@ function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { d
   useEffect(() => {
     const viewport = window.visualViewport
     if (!viewport) return
-    const position = () => navigation.current?.closest<HTMLElement>('.brain-workspace')?.style.setProperty('--keyboard-inset', `${Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)}px`)
+    const position = () => {
+      const editing = document.activeElement?.matches('input,textarea,select')
+      const inset = editing && viewport.scale === 1 ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0
+      navigation.current?.closest<HTMLElement>('.brain-workspace')?.style.setProperty('--keyboard-inset', `${inset}px`)
+    }
+    const afterFocus = () => queueMicrotask(position)
     position()
     viewport.addEventListener('resize', position)
     viewport.addEventListener('scroll', position)
-    return () => { viewport.removeEventListener('resize', position); viewport.removeEventListener('scroll', position) }
+    document.addEventListener('focusin', afterFocus)
+    document.addEventListener('focusout', afterFocus)
+    return () => { viewport.removeEventListener('resize', position); viewport.removeEventListener('scroll', position); document.removeEventListener('focusin', afterFocus); document.removeEventListener('focusout', afterFocus) }
   }, [])
   const restoreGenerateFocus = useRef(false)
   const router = useRouter()
