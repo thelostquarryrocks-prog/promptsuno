@@ -15,6 +15,8 @@ test('first-use controls lead through song context preservation and a reversible
     expect(controls!.y + controls!.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1)
     await expect(page.getByRole('navigation', { name: 'Song tools' })).toHaveCount(1)
     expect(await page.locator('.workspace-navigation').evaluate(element => getComputedStyle(element).position)).toBe('fixed')
+    const content = await page.getByRole('main').boundingBox()
+    expect(content!.y + content!.height).toBeLessThanOrEqual(controls!.y)
   } else expect(controls!.y + controls!.height).toBeLessThanOrEqual(scene!.y)
   await page.screenshot({ path: info.outputPath('workspace-discovery-brain.png'), fullPage: true })
   await activate(drawer)

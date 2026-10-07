@@ -57,7 +57,7 @@ function WorkspaceTools({ discoveryNodes, affinities, assistanceAvailable }: { d
   useEffect(() => {
     const viewport = window.visualViewport
     if (!viewport) return
-    const position = () => navigation.current?.style.setProperty('--keyboard-inset', `${Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)}px`)
+    const position = () => navigation.current?.closest<HTMLElement>('.brain-workspace')?.style.setProperty('--keyboard-inset', `${Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)}px`)
     position()
     viewport.addEventListener('resize', position)
     viewport.addEventListener('scroll', position)
