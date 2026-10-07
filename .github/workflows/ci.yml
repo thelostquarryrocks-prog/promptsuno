@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   quota-database:
-    name: PostgreSQL 17 quota integration (17 checks)
+    name: PostgreSQL 17 quota and aggregate spend integration
     runs-on: ubuntu-latest
     timeout-minutes: 10
     services:

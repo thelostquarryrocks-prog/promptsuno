@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
 import { NextResponse } from 'next/server'
 import { createClient } from '../../../lib/supabase/server'
-import { reserveCompilerAttempt } from '../../../lib/compiler-quota'
+import { AI_MODEL, AI_OUTPUT_TOKEN_CAP, reserveAIRequest } from '../../../lib/ai-spend'
 import { CompilerRequestError, readCompilerRequest } from '../../../lib/compiler-request'
 import { resolveCompilerInput } from '../../../lib/sound-brain-catalog'
 import { parseAssistRequest, parseAssistResponse, type AssistRequest } from '../../../lib/workspace-assistance'
@@ -75,17 +75,19 @@ export async function POST(req: Request) {
     if (error instanceof CompilerRequestError) return json({ error: error.message }, error.status)
     return json({ error: 'Invalid assistance context.' }, 400)
   }
+  const providerRequest: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
+      model: AI_MODEL, max_completion_tokens: AI_OUTPUT_TOKEN_CAP,
+      messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: JSON.stringify(input) }],
+      response_format: { type: 'json_schema', json_schema: { name: 'workspace_assistance', strict: true, schema: responseSchema } },
+    }
   try {
-    const reservation = await reserveCompilerAttempt(supabase)
+    const reservation = await reserveAIRequest(supabase, 'assist', providerRequest)
+    if (!reservation.allowed && reservation.reason === 'paused') return json({ error: 'AI requests are paused. Your song is unchanged; you can keep editing.' }, 503)
     if (!reservation.allowed) return json({ error: 'Assistance usage limit reached. Your song is unchanged.', retry_after_seconds: reservation.retryAfterSeconds }, 429, { 'Retry-After': String(reservation.retryAfterSeconds) })
   } catch { return json({ error: 'Usage checks are unavailable. Please try again later.' }, 503) }
   try {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0, timeout: 30_000 })
-    const response = await openai.chat.completions.create({
-      model: 'gpt-5.6-luna', max_completion_tokens: 2048,
-      messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: JSON.stringify(input) }],
-      response_format: { type: 'json_schema', json_schema: { name: 'workspace_assistance', strict: true, schema: responseSchema } },
-    })
+    const response = await openai.chat.completions.create(providerRequest)
     return json(parseAssistResponse(JSON.parse(response.choices[0]?.message.content || '{}'), input))
   } catch { return json({ error: 'Assistance could not produce a valid proposal. Your song is unchanged.' }, 502) }
 }

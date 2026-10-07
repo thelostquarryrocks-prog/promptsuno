@@ -26,16 +26,26 @@ const request = (body: unknown) => new Request('http://localhost/api/generate', 
 
 beforeEach(() => {
   vi.stubEnv('OPENAI_API_KEY', 'unit-test-placeholder')
+  vi.stubEnv('AI_SPEND_ENABLED', 'true')
   createCompletion.mockReset()
   constructProvider.mockReset()
   rpc.mockReset().mockReturnValue({ abortSignal })
-  abortSignal.mockReset().mockResolvedValue({ data: { allowed: true, retry_after_seconds: 0 }, error: null })
+  abortSignal.mockReset().mockResolvedValue({ data: { contract_version: 1, allowed: true, model: 'gpt-5.6-luna', input_token_reservation: 131072, output_token_cap: 2048, reserved_microusd: 100 }, error: null })
   createClient.mockReset().mockResolvedValue({ auth: { getUser }, rpc })
   getUser.mockReset().mockResolvedValue({ data: { user: { id: 'verified-server-user' } }, error: null })
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 
 describe('existing Luna compiler API', () => {
+  it('blocks the provider when aggregate enablement is absent or the durable guard pauses', async () => {
+    vi.stubEnv('AI_SPEND_ENABLED', '')
+    expect((await POST(request(input))).status).toBe(503)
+    expect(rpc).not.toHaveBeenCalled()
+    vi.stubEnv('AI_SPEND_ENABLED', 'true')
+    abortSignal.mockResolvedValue({ data: { contract_version: 1, allowed: false, reason: 'paused' }, error: null })
+    expect((await POST(request(input))).status).toBe(503)
+    expect(createCompletion).not.toHaveBeenCalled()
+  })
   it('keeps an instrument palette separate from unspecified vocal intent in provider guidance', async () => {
     const palette = { nodes: [nodes[0]], relationship_notes: 'Use only piano. Keep the texture sparse.' }
     const result = { ...ready, styles: 'Sparse piano.', coverage: [{ node_id: 'piano', status: 'preserved' }] }
@@ -55,7 +65,7 @@ describe('existing Luna compiler API', () => {
     expect(response.status).toBe(200)
     expect(getUser).toHaveBeenCalledExactlyOnceWith()
     expect(getUser.mock.invocationCallOrder[0]).toBeLessThan(constructProvider.mock.invocationCallOrder[0])
-    expect(rpc).toHaveBeenCalledExactlyOnceWith('reserve_compiler_attempt')
+    expect(rpc).toHaveBeenCalledExactlyOnceWith('reserve_ai_attempt', { requested_action: 'compile' })
     expect(getUser.mock.invocationCallOrder[0]).toBeLessThan(rpc.mock.invocationCallOrder[0])
     expect(abortSignal.mock.invocationCallOrder[0]).toBeLessThan(constructProvider.mock.invocationCallOrder[0])
     expect(constructProvider).toHaveBeenCalledWith({ apiKey: 'unit-test-placeholder', maxRetries: 0, timeout: 30_000 })
@@ -225,7 +235,7 @@ describe('paid compiler request boundary', () => {
 
 describe('durable quota integration (RPC responses simulated)', () => {
   it('returns 429 with database Retry-After and never constructs a model client', async () => {
-    abortSignal.mockResolvedValue({ data: { allowed: false, retry_after_seconds: 86400 }, error: null })
+    abortSignal.mockResolvedValue({ data: { contract_version: 1, allowed: false, reason: 'quota', retry_after_seconds: 86400 }, error: null })
     const response = await POST(request(input))
     expect(response.status).toBe(429)
     expect(response.headers.get('retry-after')).toBe('86400')
@@ -239,14 +249,14 @@ describe('durable quota integration (RPC responses simulated)', () => {
     ['missing policy', { data: null, error: { code: '55000', message: 'private configuration' } }],
     ['missing migration', { data: null, error: { code: 'PGRST202' } }],
     ['database outage', { data: null, error: { message: 'private database details' } }],
-    ['error with apparent allowance', { data: { allowed: true, retry_after_seconds: 0 }, error: { code: 'failure' } }],
+    ['error with apparent allowance', { data: { contract_version: 1, allowed: true, model: 'gpt-5.6-luna', input_token_reservation: 131072, output_token_cap: 2048, reserved_microusd: 100 }, error: { code: 'failure' } }],
     ['empty result', { data: null, error: null }],
-    ['incorrect shape', { data: [{ allowed: true, retry_after_seconds: 0 }], error: null }],
+    ['incorrect shape', { data: [{ contract_version: 1, allowed: true, model: 'gpt-5.6-luna', input_token_reservation: 131072, output_token_cap: 2048, reserved_microusd: 100 }], error: null }],
     ['truthy allowance', { data: { allowed: 'true', retry_after_seconds: 0 }, error: null }],
     ['missing retry', { data: { allowed: false }, error: null }],
-    ['invalid retry', { data: { allowed: false, retry_after_seconds: -1 }, error: null }],
-    ['fractional retry', { data: { allowed: false, retry_after_seconds: 1.5 }, error: null }],
-    ['excessive retry', { data: { allowed: false, retry_after_seconds: 2678401 }, error: null }],
+    ['invalid retry', { data: { contract_version: 1, allowed: false, reason: 'quota', retry_after_seconds: -1 }, error: null }],
+    ['fractional retry', { data: { contract_version: 1, allowed: false, reason: 'quota', retry_after_seconds: 1.5 }, error: null }],
+    ['excessive retry', { data: { contract_version: 1, allowed: false, reason: 'quota', retry_after_seconds: 2678401 }, error: null }],
   ])('fails closed for %s in production without a model call', async (_label, result) => {
     vi.stubEnv('NODE_ENV', 'production')
     abortSignal.mockResolvedValue(result)
@@ -277,16 +287,16 @@ describe('durable quota integration (RPC responses simulated)', () => {
     req.headers.set('x-user-id', 'victim')
     req.headers.set('x-quota-limit', '999999')
     expect((await POST(req)).status).toBe(200)
-    expect(rpc).toHaveBeenCalledExactlyOnceWith('reserve_compiler_attempt')
+    expect(rpc).toHaveBeenCalledExactlyOnceWith('reserve_ai_attempt', { requested_action: 'compile' })
   })
 
   it('keeps a reservation on provider failure; a manual retry must reserve again', async () => {
-    abortSignal.mockResolvedValueOnce({ data: { allowed: true, retry_after_seconds: 0 }, error: null })
-      .mockResolvedValue({ data: { allowed: false, retry_after_seconds: 30 }, error: null })
+    abortSignal.mockResolvedValueOnce({ data: { contract_version: 1, allowed: true, model: 'gpt-5.6-luna', input_token_reservation: 131072, output_token_cap: 2048, reserved_microusd: 100 }, error: null })
+      .mockResolvedValue({ data: { contract_version: 1, allowed: false, reason: 'quota', retry_after_seconds: 30 }, error: null })
     createCompletion.mockRejectedValue(new Error('provider timeout'))
     expect((await POST(request(input))).status).toBe(502)
     expect((await POST(request(input))).status).toBe(429)
-    expect(rpc.mock.calls).toEqual([['reserve_compiler_attempt'], ['reserve_compiler_attempt']])
+    expect(rpc.mock.calls).toEqual([['reserve_ai_attempt', { requested_action: 'compile' }], ['reserve_ai_attempt', { requested_action: 'compile' }]])
     expect(createCompletion).toHaveBeenCalledTimes(1)
   })
 
@@ -297,7 +307,7 @@ describe('durable quota integration (RPC responses simulated)', () => {
     const pending = POST(request(input))
     await vi.waitFor(() => expect(abortSignal).toHaveBeenCalledTimes(1))
     expect(createCompletion).not.toHaveBeenCalled()
-    resolveReservation({ data: { allowed: true, retry_after_seconds: 0 }, error: null })
+    resolveReservation({ data: { contract_version: 1, allowed: true, model: 'gpt-5.6-luna', input_token_reservation: 131072, output_token_cap: 2048, reserved_microusd: 100 }, error: null })
     expect((await pending).status).toBe(200)
   })
 
@@ -310,13 +320,13 @@ describe('durable quota integration (RPC responses simulated)', () => {
       return {
         auth: { getUser: async () => ({ data: { user: { id } }, error: null }) },
         rpc: (name: string) => {
-          expect(name).toBe('reserve_compiler_attempt')
+          expect(name).toBe('reserve_ai_attempt')
           return { abortSignal: async () => {
             await new Promise(resolve => setTimeout(resolve, 1))
             const count = used.get(id) ?? 0
             const allowed = count < 3
             if (allowed) used.set(id, count + 1)
-            return { data: { allowed, retry_after_seconds: allowed ? 0 : 60 }, error: null }
+            return { data: { contract_version: 1, allowed, reason: 'quota', retry_after_seconds: allowed ? 0 : 60, model: 'gpt-5.6-luna', input_token_reservation: 131072, output_token_cap: 2048, reserved_microusd: 100 }, error: null }
           } }
         },
       }

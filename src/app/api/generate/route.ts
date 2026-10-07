@@ -4,7 +4,7 @@ import { resolveCompilerInput } from '../../../lib/sound-brain-catalog';
 import { parseCompilerOutput, type CompilerInput } from '../../../lib/compiler-contract';
 import { createClient } from '../../../lib/supabase/server';
 import { CompilerRequestError, readCompilerRequest } from '../../../lib/compiler-request';
-import { reserveCompilerAttempt } from '../../../lib/compiler-quota';
+import { AI_MODEL, AI_OUTPUT_TOKEN_CAP, reserveAIRequest } from '../../../lib/ai-spend';
 
 const SYSTEM_PROMPT = `You are the musical-intent writer for the PromptSuno.com Prompt Generator. Convert the supplied structured musical intent into a concise, editable Styles prompt. You describe a request; you do not generate audio, control Suno, know its hidden parser, or promise adherence.
 
@@ -60,28 +60,14 @@ export async function POST(req: Request) {
   if (!process.env.OPENAI_API_KEY) {
     return json({ error: 'The prompt compiler is unavailable. Please try again later.' }, 503);
   }
-  try {
-    const reservation = await reserveCompilerAttempt(supabase);
-    if (!reservation.allowed) {
-      return json({
-        error: `Compiler usage limit reached. Try again in ${reservation.retryAfterSeconds} seconds. Your nodes and notes are unchanged.`,
-        retry_after_seconds: reservation.retryAfterSeconds,
-      }, 429, { 'Retry-After': String(reservation.retryAfterSeconds) });
-    }
-  } catch {
-    // A timeout may have committed: do not retry/refund or attempt the provider.
-    return json({ error: 'Compiler usage checks are unavailable. Please try again later.' }, 503);
-  }
-  try {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0, timeout: 30_000 });
-    const response = await openai.chat.completions.create({
-      model: 'gpt-5.6-luna',
+  const providerRequest: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
+      model: AI_MODEL,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'developer', content: DEVELOPER_PROMPT },
         { role: 'user', content: JSON.stringify(intentPayload) }
       ],
-      max_completion_tokens: 2048,
+      max_completion_tokens: AI_OUTPUT_TOKEN_CAP,
       response_format: {
         type: 'json_schema',
         json_schema: {
@@ -113,7 +99,23 @@ export async function POST(req: Request) {
           }
         }
       }
-    });
+    };
+  try {
+    const reservation = await reserveAIRequest(supabase, 'compile', providerRequest);
+    if (!reservation.allowed && reservation.reason === 'paused') return json({ error: 'AI requests are paused. Your song is unchanged; you can keep editing.' }, 503);
+    if (!reservation.allowed) {
+      return json({
+        error: `Compiler usage limit reached. Try again in ${reservation.retryAfterSeconds} seconds. Your nodes and notes are unchanged.`,
+        retry_after_seconds: reservation.retryAfterSeconds,
+      }, 429, { 'Retry-After': String(reservation.retryAfterSeconds) });
+    }
+  } catch {
+    // A timeout may have committed: do not retry/refund or attempt the provider.
+    return json({ error: 'Compiler usage checks are unavailable. Please try again later.' }, 503);
+  }
+  try {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0, timeout: 30_000 });
+    const response = await openai.chat.completions.create(providerRequest);
 
     const result = response.choices[0]?.message.content;
     const compiled = parseCompilerOutput(JSON.parse(result || '{}'), intentPayload.nodes);
